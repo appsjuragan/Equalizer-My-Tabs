@@ -101,6 +101,16 @@ function initMessaging() {
                 uiSetStartEq();
             }
         }
+        else if (msg.type === "fftData") {
+            if (Visualizer) {
+                Visualizer.updateVisualizer(msg);
+            }
+            if (msg.sbrActive) {
+                document.getElementById('sbrIndicator').classList.add('active');
+            } else {
+                document.getElementById('sbrIndicator').classList.remove('active');
+            }
+        }
         else if (msg.type === "sendWorkspaceStatus") {
             isFirstLoad = false;
             updateWorkspace(msg);

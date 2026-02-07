@@ -10,15 +10,21 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
         this.limiter = null;
         this.outputGain = 1.0;
         this.qualityMode = 'efficient';
-        this.minReduction = 1.0; // Linear max reduction (1.0 = none)
+        this.minReduction = 1.0;
 
-        // FFT analysis
+        // FFT analysis initialization
         this.fftSize = 4096 * 2;
         this.fftBuffer = new Float32Array(this.fftSize);
         this.fftPosition = 0;
         this.fftCounter = 0;
 
-        // Wasm State (Phase 3 Integration)
+        // SBR State
+        this.sbrActive = false;
+        this.sbrGain = 0.0;
+        this.sbrHp1 = { x1: 0, y1: 0 };
+        this.sbrHp2 = { x1: 0, y1: 0 };
+
+        // Wasm State
         this.wasmDSP = null;
         this.wasmLoaded = false;
         this.wasmInputPtr = 0;
@@ -60,34 +66,23 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
             this.cosTable[i] = Math.cos(-2 * Math.PI * i / this.fftSize);
         }
 
-        // Message handler
         this.port.onmessage = (event) => this.handleMessage(event.data);
     }
 
     initFilters() {
-        // Create biquad filter parameters for each band
-        // Each filter has separate state for left and right channels
         this.filters = this.centerFrequencies.map((freq, index) => ({
             type: index === 0 ? 'lowshelf' : (index === this.numFilters - 1 ? 'highshelf' : 'peaking'),
             frequency: freq,
             gain: 0,
             q: this.getQForFrequency(freq),
-            // Biquad filter coefficients (will be calculated)
-            b0: 1, b1: 0, b2: 0,
-            a1: 0, a2: 0,
-            // State variables for LEFT channel
-            x1L: 0, x2L: 0,
-            y1L: 0, y2L: 0,
-            // State variables for RIGHT channel
-            x1R: 0, x2R: 0,
-            y1R: 0, y2R: 0
+            b0: 1, b1: 0, b2: 0, a1: 0, a2: 0,
+            x1L: 0, x2L: 0, y1L: 0, y2L: 0,
+            x1R: 0, x2R: 0, y1R: 0, y2R: 0
         }));
-
         this.updateAllFilterCoefficients();
     }
 
     getQForFrequency(freq) {
-        // Frequency-dependent Q values
         let q = 1.0;
         if (freq < 100) q = 0.7;
         else if (freq < 500) q = 0.9;
@@ -95,20 +90,13 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
         else if (freq < 8000) q = 1.3;
         else q = 1.5;
 
-        // Apply quality modifier
-        if (this.qualityMode === 'efficient') {
-            return q * 0.8; // Smoother, wider bands
-        } else if (this.qualityMode === 'quality') {
-            return q * 1.0; // Standard
-        } else { // hifi
-            return q * 1.2; // Sharper, narrower bands
-        }
+        if (this.qualityMode === 'efficient') return q * 0.8;
+        else if (this.qualityMode === 'quality') return q * 1.0;
+        else return q * 1.2;
     }
 
     updateAllFilterCoefficients() {
-        this.filters.forEach(filter => {
-            this.calculateBiquadCoefficients(filter);
-        });
+        this.filters.forEach(filter => this.calculateBiquadCoefficients(filter));
     }
 
     calculateBiquadCoefficients(filter) {
@@ -118,7 +106,6 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
         const sinW0 = Math.sin(w0);
         const alpha = sinW0 / (2 * q);
         const A = Math.pow(10, gain / 40);
-
         let b0, b1, b2, a0, a1, a2;
 
         if (type === 'lowshelf') {
@@ -135,67 +122,69 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
             a0 = (A + 1) - (A - 1) * cosW0 + 2 * Math.sqrt(A) * alpha;
             a1 = 2 * ((A - 1) - (A + 1) * cosW0);
             a2 = (A + 1) - (A - 1) * cosW0 - 2 * Math.sqrt(A) * alpha;
-        } else { // peaking
-            b0 = 1 + alpha * A;
-            b1 = -2 * cosW0;
-            b2 = 1 - alpha * A;
-            a0 = 1 + alpha / A;
-            a1 = -2 * cosW0;
-            a2 = 1 - alpha / A;
+        } else {
+            b0 = 1 + alpha * A; b1 = -2 * cosW0; b2 = 1 - alpha * A;
+            a0 = 1 + alpha / A; a1 = -2 * cosW0; a2 = 1 - alpha / A;
+        }
+        filter.b0 = b0 / a0; filter.b1 = b1 / a0; filter.b2 = b2 / a0;
+        filter.a1 = a1 / a0; filter.a2 = a2 / a0;
+    }
+
+    highpass(input, state, alpha) {
+        const output = alpha * (state.y1 + input - state.x1);
+        state.x1 = input; state.y1 = output;
+        return output;
+    }
+
+    processSBR(sample, channelId) {
+        let state = (channelId === 'L') ? this.sbrHp1 : this.sbrHp2;
+        let hp1 = this.highpass(sample, state, 0.8);
+        return sample + (Math.abs(hp1) * this.sbrGain * 0.1);
+    }
+
+    detectSBR(magnitudes) {
+        let midEnergy = 0, highEnergy = 0;
+        // Check array bounds before accessing
+        if (magnitudes.length < 2700) return;
+
+        for (let i = 340; i < 850; i++) midEnergy += magnitudes[i];
+        for (let i = 1360; i < 2700; i++) highEnergy += magnitudes[i];
+        midEnergy /= (850 - 340); highEnergy /= (2700 - 1360);
+
+        if (midEnergy > 0.05 && (highEnergy / midEnergy) < 0.2) {
+            this.sbrActive = true;
+        } else {
+            this.sbrActive = false;
         }
 
-        // Normalize coefficients
-        filter.b0 = b0 / a0;
-        filter.b1 = b1 / a0;
-        filter.b2 = b2 / a0;
-        filter.a1 = a1 / a0;
-        filter.a2 = a2 / a0;
+        if (this.sbrActive) {
+            this.sbrGain += 0.005; if (this.sbrGain > 1.0) this.sbrGain = 1.0;
+        } else {
+            this.sbrGain -= 0.005; if (this.sbrGain < 0.0) this.sbrGain = 0.0;
+        }
     }
 
     processBiquad(filter, input, channel) {
-        // Direct Form II - with separate state per channel
         const isLeft = channel === 'L';
         const x1 = isLeft ? filter.x1L : filter.x1R;
         const x2 = isLeft ? filter.x2L : filter.x2R;
         const y1 = isLeft ? filter.y1L : filter.y1R;
         const y2 = isLeft ? filter.y2L : filter.y2R;
 
-        const output = filter.b0 * input + filter.b1 * x1 + filter.b2 * x2
-            - filter.a1 * y1 - filter.a2 * y2;
+        const output = filter.b0 * input + filter.b1 * x1 + filter.b2 * x2 - filter.a1 * y1 - filter.a2 * y2;
 
-        // Update state
-        if (isLeft) {
-            filter.x2L = filter.x1L;
-            filter.x1L = input;
-            filter.y2L = filter.y1L;
-            filter.y1L = output;
-        } else {
-            filter.x2R = filter.x1R;
-            filter.x1R = input;
-            filter.y2R = filter.y1R;
-            filter.y1R = output;
-        }
-
+        if (isLeft) { filter.x2L = filter.x1L; filter.x1L = input; filter.y2L = filter.y1L; filter.y1L = output; }
+        else { filter.x2R = filter.x1R; filter.x1R = input; filter.y2R = filter.y1R; filter.y1R = output; }
         return output;
     }
 
-
     softLimit(input, threshold) {
-        // Simple soft limiter
         const absInput = Math.abs(input);
-        if (absInput < threshold) {
-            return input;
-        }
-
+        if (absInput < threshold) return input;
         const excess = absInput - threshold;
         const limited = threshold + excess / (1 + excess);
-
-        // Track reduction (ratio)
-        const currentRatio = limited / absInput;
-        if (currentRatio < this.minReduction) {
-            this.minReduction = currentRatio;
-        }
-
+        const ratio = limited / absInput;
+        if (ratio < this.minReduction) this.minReduction = ratio;
         return input > 0 ? limited : -limited;
     }
 
@@ -209,197 +198,99 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
                     this.calculateBiquadCoefficients(this.filters[data.index]);
                 }
                 break;
-
-            case 'modifyGain':
-                this.outputGain = data.gain;
-                break;
-
+            case 'modifyGain': this.outputGain = data.gain; break;
             case 'resetFilters':
-                this.filters.forEach(filter => {
-                    filter.gain = 0;
-                    this.calculateBiquadCoefficients(filter);
-                });
-                this.outputGain = 1.0;
-                break;
-
+                this.filters.forEach(filter => { filter.gain = 0; this.calculateBiquadCoefficients(filter); });
+                this.outputGain = 1.0; break;
             case 'setQualityMode':
                 this.qualityMode = data.mode;
-                // Update Q values based on mode
-                this.filters.forEach(filter => {
-                    filter.q = this.getQForFrequency(filter.frequency);
-                    this.calculateBiquadCoefficients(filter);
-                });
+                this.filters.forEach(filter => { filter.q = this.getQForFrequency(filter.frequency); this.calculateBiquadCoefficients(filter); });
                 break;
         }
     }
 
-    // Simple JS FFT (Cooley-Tukey)
     performFFT(input) {
         const n = this.fftSize;
         const real = new Float32Array(n);
         const imag = new Float32Array(n);
 
-        // Apply window and bit-reversal permutation
         for (let i = 0; i < n; i++) {
             const val = input[i] * this.window[i];
             const rev = this.bitRev[i];
-            real[rev] = val;
-            imag[rev] = 0;
+            real[rev] = val; imag[rev] = 0;
         }
 
-        // Butterfly operations
         for (let size = 2; size <= n; size *= 2) {
             const halfSize = size / 2;
             const tabStep = n / size;
-
             for (let i = 0; i < n; i += size) {
                 for (let j = 0; j < halfSize; j++) {
                     const k = j * tabStep;
                     const tReal = real[i + j + halfSize] * this.cosTable[k] - imag[i + j + halfSize] * this.sinTable[k];
                     const tImag = real[i + j + halfSize] * this.sinTable[k] + imag[i + j + halfSize] * this.cosTable[k];
-
-                    real[i + j + halfSize] = real[i + j] - tReal;
-                    imag[i + j + halfSize] = imag[i + j] - tImag;
-                    real[i + j] += tReal;
-                    imag[i + j] += tImag;
+                    real[i + j + halfSize] = real[i + j] - tReal; imag[i + j + halfSize] = imag[i + j] - tImag;
+                    real[i + j] += tReal; imag[i + j] += tImag;
                 }
             }
         }
 
-        // Compute magnitudes (0 to n/2)
         const magnitudes = new Float32Array(n / 2);
         for (let i = 0; i < n / 2; i++) {
             magnitudes[i] = Math.sqrt(real[i] * real[i] + imag[i] * imag[i]);
-            // Convert to dB-like scale for visualization
-            // 20 * log10(mag) + offset
             let db = 20 * Math.log10(magnitudes[i] + 1e-6);
-            // Map -100dB to 0dB range to 0.0-1.0
             magnitudes[i] = Math.max(0, (db + 100) / 100);
         }
-
         return magnitudes;
     }
 
-    // Phase 3: Wasm Integration Logic
-    // This method will be called when Wasm module is loaded
-    async loadWasmModule() {
-        try {
-            // Stub for loading the Wasm module
-            // const { default: init, EarsDSP } = await import('../wasm/ears_dsp.js');
-            // await init();
-            // this.wasmDSP = new EarsDSP(this.sampleRate);
-
-            // Allocate memory in Wasm linear memory for zero-copy/efficient transfer
-            // this.wasmInputPtr = this.wasmDSP.alloc_buffer(128); // Block size
-            // this.wasmOutputPtr = this.wasmDSP.alloc_buffer(128);
-
-            // this.wasmLoaded = true;
-            // console.log('Wasm DSP loaded successfully');
-        } catch (e) {
-            console.error('Wasm load failed, staying on JS fallback', e);
-        }
-    }
-
-    processWasm(inputChannel, outputChannel, blockSize) {
-        // Copy input to Wasm memory
-        // const wasmInput = new Float32Array(this.wasmMemory.buffer, this.wasmInputPtr, blockSize);
-        // wasmInput.set(inputChannel);
-
-        // Process
-        // this.wasmDSP.process_block(this.wasmInputPtr, this.wasmOutputPtr, blockSize);
-
-        // Copy output from Wasm memory
-        // const wasmOutput = new Float32Array(this.wasmMemory.buffer, this.wasmOutputPtr, blockSize);
-        // outputChannel.set(wasmOutput);
-
-        // FFT Handling
-        // const fftData = this.wasmDSP.get_fft_data();
-        // this.port.postMessage({ type: 'fftData', data: fftData });
-
-        return true;
-    }
-
     process(inputs, outputs, parameters) {
-        const input = inputs[0];
-        const output = outputs[0];
-
-        if (!input || input.length === 0) {
-            return true;
-        }
+        const input = inputs[0]; const output = outputs[0];
+        if (!input || input.length === 0) return true;
 
         const numChannels = Math.min(input.length, output.length);
         const blockSize = input[0].length;
-
-        // Select Engine: Wasm (Priority) or JS (Fallback)
-        if (this.wasmLoaded && this.wasmDSP) {
-            return this.processWasm(input[0], output[0], blockSize);
-        }
-
-        // JS Fallback Processing - Handle stereo
-        const threshold = this.qualityMode === 'efficient' ? 0.89 :
-            this.qualityMode === 'quality' ? 0.94 : 0.96;
+        const threshold = this.qualityMode === 'efficient' ? 0.89 : this.qualityMode === 'quality' ? 0.94 : 0.96;
 
         for (let ch = 0; ch < numChannels; ch++) {
-            const inputChannel = input[ch];
-            const outputChannel = output[ch];
+            const inputChannel = input[ch]; const outputChannel = output[ch];
             const channelId = ch === 0 ? 'L' : 'R';
 
             for (let i = 0; i < blockSize; i++) {
                 let sample = inputChannel[i];
+                for (let f = 0; f < this.numFilters; f++) sample = this.processBiquad(this.filters[f], sample, channelId);
 
-                // Apply filter chain
-                for (let f = 0; f < this.numFilters; f++) {
-                    sample = this.processBiquad(this.filters[f], sample, channelId);
-                }
+                if (this.sbrGain > 0.001) sample = this.processSBR(sample, channelId);
 
-                // Apply output gain
                 sample *= this.outputGain;
-
-                // Soft limiting
                 sample = this.softLimit(sample, threshold);
-
                 outputChannel[i] = sample;
             }
         }
 
-        // Collect samples for FFT (use left channel or mono mix)
-        const fftSource = numChannels === 1 ? output[0] : output[0];
         for (let i = 0; i < blockSize; i++) {
-            // Use left channel for visualization (or mix if stereo)
             let sample = numChannels === 2 ? (output[0][i] + output[1][i]) * 0.5 : output[0][i];
             this.fftBuffer[this.fftPosition++] = sample;
-            if (this.fftPosition >= this.fftSize) {
-                this.fftPosition = 0;
-            }
+            if (this.fftPosition >= this.fftSize) this.fftPosition = 0;
         }
 
-        // Send FFT data periodically (30 FPS)
         this.fftCounter++;
         if (this.fftCounter >= Math.floor(this.sampleRate / 128 / 30)) {
             this.fftCounter = 0;
-
-            // Perform JS FFT (fallback until Wasm is ready)
             const fftData = this.performFFT(this.fftBuffer);
+            this.detectSBR(fftData);
 
-            // Calculate dB reduction
             let reductionDb = 0;
-            if (this.minReduction < 1.0) {
-                // Safety for log10
-                reductionDb = 20 * Math.log10(Math.max(1e-6, this.minReduction));
-            }
-            // Reset for next frame
+            if (this.minReduction < 1.0) reductionDb = 20 * Math.log10(Math.max(1e-6, this.minReduction));
             this.minReduction = 1.0;
 
             this.port.postMessage({
-                type: 'fftData',
-                data: fftData,
-                limiterReduction: reductionDb
+                type: 'fftData', data: fftData,
+                limiterReduction: reductionDb,
+                sbrActive: this.sbrGain > 0.1
             });
         }
-
         return true;
     }
-
 }
 
 registerProcessor('ears-audio-processor', EarsAudioProcessor);

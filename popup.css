@@ -480,15 +480,44 @@ button :focus {}
 }
 
 @keyframes limiter-pulse {
-
-	0%,
-	100% {
-		opacity: 0.7;
+	0% {
+		opacity: 0.8;
 	}
 
 	50% {
 		opacity: 1;
 	}
+
+	100% {
+		opacity: 0.8;
+	}
+}
+
+/* SBR Indicator */
+#sbrIndicator {
+	position: absolute;
+	top: 26px;
+	right: 50px;
+	/* Left of LIM (right: 15px) */
+	font-family: sans-serif;
+	font-weight: bold;
+	font-size: 10px;
+	color: #555;
+	background-color: #222;
+	padding: 2px 4px;
+	border-radius: 3px;
+	opacity: 0;
+	/* Hidden by default */
+	transition: all 0.5s;
+	pointer-events: none;
+	z-index: 1000;
+}
+
+#sbrIndicator.active {
+	opacity: 1;
+	color: #4CAF50;
+	/* Green for "Good/Active" feature */
+	box-shadow: 0 0 5px rgba(76, 175, 80, 0.4);
 }
 
 /* Quality mode indicator colors */

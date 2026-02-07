@@ -55,10 +55,17 @@ async function initAudio() {
     audioWorkletNode = new AudioWorkletNode(M, 'ears-audio-processor');
 
     // Handle messages from worklet (only for limiter reduction now)
+    // Handle messages from worklet (FFT data, limiter, SBR)
     audioWorkletNode.port.onmessage = (event) => {
         if (event.data.type === 'fftData') {
-            // Store limiter reduction for use in fftLoop
-            currentLimiterReduction = event.data.limiterReduction || 0;
+            const data = event.data;
+            // Forward to popup/background
+            chrome.runtime.sendMessage({
+                type: 'fftData',
+                data: data.data,
+                limiterReduction: data.limiterReduction,
+                sbrActive: data.sbrActive
+            }).catch(() => { }); // Ignore errors if popup is closed
         }
     };
 
