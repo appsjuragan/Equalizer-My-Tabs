@@ -1,8 +1,19 @@
-// AudioWorklet Processor for JuraganAudio Extension
 // Handles real-time audio processing using Web Audio API
-import init, { JuraganAudioDSP } from './juragan_audio_dsp.js';
 
-console.log("JuraganAudio Processor loaded successfully");
+// Polyfill for TextDecoder in AudioWorkletGlobalScope (for Wasm support)
+if (typeof TextDecoder === 'undefined') {
+    globalThis.TextDecoder = class TextDecoder {
+        constructor(label) { this.label = label; }
+        decode(buffer) {
+            if (!buffer) return "";
+            let str = "";
+            for (let i = 0; i < buffer.length; i++) str += String.fromCharCode(buffer[i]);
+            try { return decodeURIComponent(escape(str)); } catch (e) { return str; }
+        }
+    };
+}
+
+import init, { JuraganAudioDSP } from './juragan_audio_dsp.js';
 
 class JuraganAudioProcessor extends AudioWorkletProcessor {
     constructor(options) {
@@ -78,7 +89,6 @@ class JuraganAudioProcessor extends AudioWorkletProcessor {
 
     async loadWasmModule() {
         try {
-            console.log("Loading Wasm module...");
             const instance = await init({ module_or_path: this.wasmModule });
             this.wasmMemory = instance.memory;
 
@@ -86,7 +96,6 @@ class JuraganAudioProcessor extends AudioWorkletProcessor {
             this.wasmDSP_R = new JuraganAudioDSP(this.sampleRate);
 
             this.wasmLoaded = true;
-            console.log('Wasm DSP loaded and initialized (Stereo)');
 
             this.syncWasmState();
 

@@ -23,17 +23,13 @@ const K = 11;
 const z = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 12000, 16000];
 
 async function initAudio() {
-    console.log("Offscreen init. Runtime URL:", chrome.runtime.getURL(''));
 
     // Attempt to get our own tab ID if possible
     try {
         if (chrome.tabs && chrome.tabs.getCurrent) {
-            chrome.tabs.getCurrent(tab => {
-                if (tab) console.log("Offscreen Tab ID found:", tab.id);
-                else console.log("Offscreen Tab ID is null (expected).");
-            });
+            chrome.tabs.getCurrent(tab => { });
         }
-    } catch (e) { console.log("Can't get current tab:", e); }
+    } catch (e) { }
 
     if (Z) return;
 
@@ -45,7 +41,6 @@ async function initAudio() {
     // Load AudioWorklet processor
     try {
         await M.audioWorklet.addModule(chrome.runtime.getURL('worklet/audio-processor.js'));
-        console.log('AudioWorklet loaded successfully');
     } catch (err) {
         console.error('Failed to load AudioWorklet:', err);
         return;
@@ -91,7 +86,6 @@ async function initAudio() {
     audioWorkletNode.connect(analyserNode);
 
     Z = true;
-    console.log('Audio initialized with AudioWorklet + AnalyserNode');
 }
 
 function updateFilter(msg) {
@@ -294,16 +288,13 @@ function fftLoop() {
 
 // Listen for FFT start/stop requests from popup
 fftChannel.onmessage = (event) => {
-    console.log("Offscreen FFT Channel msg:", event.data.type);
     if (event.data.type === 'startFFT') {
         if (!fftLoopRunning) {
             fftLoopRunning = true;
-            console.log("Starting FFT Loop...");
             fftLoop();
         }
     } else if (event.data.type === 'stopFFT') {
         fftLoopRunning = false;
-        console.log("Stopping FFT Loop.");
     }
 };
 

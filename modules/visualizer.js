@@ -27,7 +27,6 @@ export function init(onLimiterUpdate) {
     fftChannel = new BroadcastChannel(FFT_CHANNEL_NAME);
     fftChannel.onmessage = (event) => {
         if (event.data.type === 'fft') {
-            // console.log("Popup received FFT data length:", event.data.fft.length);
             updateVisualizer(event.data);
             if (event.data.limiterReduction !== undefined && limiterCallback) {
                 limiterCallback(event.data.limiterReduction);

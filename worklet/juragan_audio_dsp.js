@@ -1,17 +1,5 @@
 /* @ts-self-types="./juragan_audio_dsp.d.ts" */
 
-if (typeof TextDecoder === 'undefined') {
-    globalThis.TextDecoder = class TextDecoder {
-        constructor(label) { this.label = label; }
-        decode(buffer) {
-            if (!buffer) return "";
-            let str = "";
-            for (let i = 0; i < buffer.length; i++) str += String.fromCharCode(buffer[i]);
-            try { return decodeURIComponent(escape(str)); } catch (e) { return str; }
-        }
-    };
-}
-
 export class JuraganAudioDSP {
     __destroy_into_raw() {
         const ptr = this.__wbg_ptr;
@@ -97,13 +85,13 @@ if (Symbol.dispose) JuraganAudioDSP.prototype[Symbol.dispose] = JuraganAudioDSP.
 function __wbg_get_imports() {
     const import0 = {
         __proto__: null,
-        __wbg___wbindgen_copy_to_typed_array_fc0809a4dec43528: function (arg0, arg1, arg2) {
+        __wbg___wbindgen_copy_to_typed_array_fc0809a4dec43528: function(arg0, arg1, arg2) {
             new Uint8Array(arg2.buffer, arg2.byteOffset, arg2.byteLength).set(getArrayU8FromWasm0(arg0, arg1));
         },
-        __wbg___wbindgen_throw_be289d5034ed271b: function (arg0, arg1) {
+        __wbg___wbindgen_throw_be289d5034ed271b: function(arg0, arg1) {
             throw new Error(getStringFromWasm0(arg0, arg1));
         },
-        __wbindgen_init_externref_table: function () {
+        __wbindgen_init_externref_table: function() {
             const table = wasm.__wbindgen_externrefs;
             const offset = table.grow(4);
             table.set(0, undefined);
@@ -120,7 +108,7 @@ function __wbg_get_imports() {
 }
 
 const JuraganAudioDSPFinalization = (typeof FinalizationRegistry === 'undefined')
-    ? { register: () => { }, unregister: () => { } }
+    ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_juraganaudiodsp_free(ptr >>> 0, 1));
 
 function getArrayF32FromWasm0(ptr, len) {
@@ -228,7 +216,7 @@ function initSync(module) {
 
     if (module !== undefined) {
         if (Object.getPrototypeOf(module) === Object.prototype) {
-            ({ module } = module)
+            ({module} = module)
         } else {
             console.warn('using deprecated parameters for `initSync()`; pass a single object instead')
         }
@@ -248,7 +236,7 @@ async function __wbg_init(module_or_path) {
 
     if (module_or_path !== undefined) {
         if (Object.getPrototypeOf(module_or_path) === Object.prototype) {
-            ({ module_or_path } = module_or_path)
+            ({module_or_path} = module_or_path)
         } else {
             console.warn('using deprecated parameters for the initialization function; pass a single object instead')
         }
