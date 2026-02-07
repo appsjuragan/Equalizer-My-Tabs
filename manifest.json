@@ -32,9 +32,7 @@
          "resources": [
             "worklet/audio-processor.js",
             "worklet/ears_dsp.js",
-            "worklet/ears_dsp_bg.wasm",
-            "webgpu/shaders/spectrum.wgsl",
-            "webgpu/spectrum-renderer.js"
+            "worklet/ears_dsp_bg.wasm"
          ],
          "matches": [
             "<all_urls>"
