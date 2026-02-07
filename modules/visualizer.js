@@ -6,8 +6,8 @@ const VISUALIZER_KEY = "SHOW_VISUALIZER";
 const m = "wheat";
 const q = "#2C3E50";
 const E = 48000; // Sample Rate (updated to match AudioContext)
-const T = 600; // Width
-const B = 360; // Height
+const T = 640; // Width
+const B = 300; // Height
 
 let fftChannel = null;
 let limiterCallback = null;
@@ -75,7 +75,7 @@ function P(e) {
     // Freq to X
     // P(e) = te(e/c) * T where c=22050 (Nyquist)
     // te(e) = e^(1/4)
-    const c = 24000; // Nyquist for 48k
+    const c = 22050; // Nyquist
     let val = e / c;
     if (val < 0) val = 0;
     return Math.pow(val, 0.25) * T;
@@ -193,7 +193,7 @@ export function updateVisualizer(data) {
             "fill-opacity": "0",
             stroke: strokeGradient,
             "pointer-events": "none",
-            "stroke-width": 1.5
+            "stroke-width": 2
         });
     }
 }

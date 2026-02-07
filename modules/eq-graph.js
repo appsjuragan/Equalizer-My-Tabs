@@ -79,8 +79,8 @@ function drawGainSlider(gainObj) {
 
     gainSvg.line(midX, y0, midX, y1).attr({ stroke: "#9ca3af", opacity: 0.3 });
 
-    gainSvg.text(midX, 15, "Vol")
-        .attr({ fill: "#9ca3af", "text-anchor": "middle", "font-size": 10 });
+    gainSvg.text(midX, 10, "Vol")
+        .attr({ fill: "#9ca3af", "text-anchor": "middle", "font-size": 9, "font-weight": "bold" });
 
     gainSvg.line(midX - 5, yZero, midX + 5, yZero).attr({ stroke: "#9ca3af" });
 
@@ -105,8 +105,8 @@ function drawFilterDots(filters) {
             dotStyle = { fill: "#22d3ee", stroke: "#22d3ee" }; // Accent
         }
 
-        const dot = eqSvg.circle(filter.x, filter.y, 6)
-            .attr({ ...dotStyle, "stroke-width": 2, stroke: "#fff" })
+        const dot = eqSvg.circle(filter.x, filter.y, 8)
+            .attr({ ...dotStyle, "stroke-width": 2.5, stroke: "#fff" })
             .addClass("filterDot");
 
         dot.drag(
@@ -136,22 +136,19 @@ function drawGrid(svg) { // ae
     const maxFreq = EQMath.MAX_FREQ;
     for (let freq = 5; freq < maxFreq; freq *= 2) {
         const x = EQMath.freqToX(freq);
-        svg.line(x, EQMath.HEIGHT / 2 + 10, x, EQMath.HEIGHT / 2 - 10).attr({ stroke: "#9ca3af", "stroke-opacity": 0.15 });
-        svg.line(x, EQMath.HEIGHT, x, EQMath.HEIGHT - 15).attr({ stroke: "#9ca3af", "stroke-opacity": 0.3 });
-        svg.text(x, EQMath.HEIGHT - 18, "" + Math.round(xToFreqForLabel(x)))
-            .attr({ fill: "#6b7280", "text-anchor": "middle", "font-size": 9 });
-        svg.line(x, 0, x, 15).attr({ stroke: "#9ca3af", "stroke-opacity": 0.3 });
+        svg.line(x, 0, x, EQMath.HEIGHT).attr({ stroke: "#9ca3af", "stroke-opacity": 0.08 }); // Full vertical lines
+        svg.line(x, EQMath.HEIGHT, x, EQMath.HEIGHT - 10).attr({ stroke: "#9ca3af", "stroke-opacity": 0.3 });
+        svg.text(x, EQMath.HEIGHT - 12, "" + Math.round(xToFreqForLabel(x)))
+            .attr({ fill: "#6b7280", "text-anchor": "middle", "font-size": 8 });
     }
 
     // Draw horizontal gain lines
     const step = 5;
-    for (let g = EQMath.MIN_GAIN; g < EQMath.MAX_GAIN; g += step) {
+    for (let g = EQMath.MIN_GAIN; g <= EQMath.MAX_GAIN; g += step) {
         const y = EQMath.gainToY(g);
-        if (Math.abs(EQMath.MAX_GAIN) - Math.abs(g) > step / 2) {
-            svg.line(0, y, 5, y).attr({ stroke: "#9ca3af", "stroke-opacity": 0.3 });
-            svg.text(7, y, "" + g)
-                .attr({ fill: "#6b7280", "font-size": 9, "dominant-baseline": "middle" });
-        }
+        svg.line(0, y, EQMath.WIDTH, y).attr({ stroke: "#9ca3af", "stroke-opacity": 0.08 }); // Full horizontal lines
+        svg.text(4, y - 2, "" + g)
+            .attr({ fill: "#6b7280", "font-size": 8, "dominant-baseline": "auto" });
     }
 }
 

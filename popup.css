@@ -41,7 +41,7 @@ body {
 	font-family: var(--font-family);
 	/* min-width: 640px; */
 	width: 670px;
-	/* Increased to 670px to add ~20px margins side-by-side with 630px content */
+	/* Flush layout for 640px + 30px SVGs */
 	min-height: fit-content;
 	overflow: hidden;
 	/* Hide scrollbars if content fits */
