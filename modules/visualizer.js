@@ -96,14 +96,14 @@ export function updateVisualizer(data) {
         else return;
     }
 
-    const n = data.data || data.fft; // Handle both message formats
+    const n = data.data || data.fft;
     if (I && n && n.length > 0) {
-        // Gradient
-        // l(x1, y1, x2, y2)
-        // Gradient: Top (Red) -> Mid (Yellow) -> Bottom (Green)
-        // L(x1, y1, x2, y2) absolute with userSpaceOnUse to tie to Volume axis
-        // Gradient: Top (Cyan) -> Mid (Indigo) -> Bottom (Dark Indigo)
-        const strokeGradient = I.gradient("L(0, 0, 0, " + B + ")#22d3ee-#818cf8-#ffffff").attr({
+        const isLight = document.body.classList.contains("light-mode");
+        const topColor = isLight ? "#4f46e5" : "#22d3ee";
+        const midColor = "#818cf8";
+        const bottomColor = isLight ? "rgba(79, 70, 229, 0.1)" : "rgba(255, 255, 255, 0.1)";
+
+        const strokeGradient = I.gradient(`L(0, 0, 0, ${B})${topColor}-${midColor}-${bottomColor}`).attr({
             gradientUnits: "userSpaceOnUse"
         });
 

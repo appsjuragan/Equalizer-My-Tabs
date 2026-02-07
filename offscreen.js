@@ -276,9 +276,15 @@ function fftLoop() {
         var array = new Float32Array(analyserNode.frequencyBinCount);
         analyserNode.getFloatFrequencyData(array); // Returns dB values (-Infinity to 0)
 
+        const fftData = Array.from(array).map(v => {
+            if (!isFinite(v) || v < -100) return -100;
+            if (v > 0) return 0;
+            return v;
+        });
+
         fftChannel.postMessage({
             type: 'fft',
-            fft: Array.from(array),
+            fft: fftData,
             limiterReduction: currentLimiterReduction
         });
     }
