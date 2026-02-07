@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // The workspace status message will tell us if we're already streaming
 
     // Check initial visualizer state
-    Visualizer.init(updateLimiterIndicator);
+    Visualizer.init(null); // Limiter updates handled in main loop now
 
     // EQ Graph callbacks
     EQGraph.init({
@@ -102,8 +102,8 @@ function initMessaging() {
             }
         }
         else if (msg.type === "fftData") {
-            if (Visualizer) {
-                Visualizer.updateVisualizer(msg);
+            if (msg.limiterReduction !== undefined) {
+                updateLimiterIndicator(msg.limiterReduction);
             }
             if (msg.sbrActive) {
                 document.getElementById('sbrIndicator').classList.add('active');

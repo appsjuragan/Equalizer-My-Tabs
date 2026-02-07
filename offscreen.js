@@ -68,6 +68,8 @@ async function initAudio() {
     audioWorkletNode.port.onmessage = (event) => {
         if (event.data.type === 'fftData') {
             const data = event.data;
+            currentLimiterReduction = data.limiterReduction;
+
             // Forward to popup/background
             chrome.runtime.sendMessage({
                 type: 'fftData',

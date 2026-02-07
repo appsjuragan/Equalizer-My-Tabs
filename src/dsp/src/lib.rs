@@ -37,16 +37,18 @@ struct SBRProcessor {
 impl SBRProcessor {
     fn new() -> Self {
         Self {
-            hp: HighPassFilter::new(0.5), // approx 3.8kHz at 48k - targets high freq generation
-            gain: 0.5, // Stronger mix for high band
+            hp: HighPassFilter::new(0.75), // Higher cutoff for cleaner HF transients
+            gain: 1.5, // Significantly boosted gain for "punch"
         }
     }
 
     fn process(&mut self, input: f32) -> f32 {
         let high_freq = self.hp.process(input);
         // Rectify to generate harmonics
+        // standard full-wave rectification
         let excitation = high_freq.abs();
-        // Mix
+        
+        // Mix with original
         input + (excitation * self.gain)
     }
 }

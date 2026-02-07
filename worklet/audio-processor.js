@@ -164,7 +164,7 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
 
                 this.port.postMessage({
                     type: 'fftData',
-                    data: fftData,
+                    // data: fftData, // Disable worklet visualizer to fix flickering
                     limiterReduction: reductionDb,
                     sbrActive: this.sbrActive
                 });
@@ -263,11 +263,11 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
         midEnergy /= (850 - 340);
         highEnergy /= (2700 - 1024);
 
-        // Relaxes threshold to 0.5 (was 0.2) to account for dB scaling
-        const conditionMet = (midEnergy > 0.05 && (highEnergy / midEnergy) < 0.5);
+        // Relaxes threshold to 0.6 so it activates more easily for "punchy" feel
+        const conditionMet = (midEnergy > 0.05 && (highEnergy / midEnergy) < 0.6);
 
         if (conditionMet) {
-            this.sbrHoldTimer = 5.0; // Hold for 5 seconds
+            this.sbrHoldTimer = 3.0; // Hold for 3 seconds (slightly less sticky)
             this.sbrActive = true;
         } else {
             if (this.sbrHoldTimer > 0) {
@@ -279,10 +279,10 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
         }
 
         if (this.sbrActive) {
-            this.sbrGain += 0.05; // Faster attack
+            this.sbrGain += 0.1; // Faster attack (approx 0.4s to full)
             if (this.sbrGain > 1.0) this.sbrGain = 1.0;
         } else {
-            this.sbrGain -= 0.01; // Slower release
+            this.sbrGain -= 0.02; // Faster release
             if (this.sbrGain < 0.0) this.sbrGain = 0.0;
         }
     }
@@ -447,9 +447,10 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
             this.minReduction = 1.0;
 
             this.port.postMessage({
-                type: 'fftData', data: fftData,
+                type: 'fftData',
+                // data: fftData, // Disable worklet visualizer to fix flickering
                 limiterReduction: reductionDb,
-                sbrActive: this.sbrGain > 0.1
+                sbrActive: this.sbrActive
             });
         }
         return true;
