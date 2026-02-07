@@ -167,12 +167,11 @@ body>input#tab-3:checked~h1 #tabNav label[for="tab-3"] {
 	left: 0;
 	width: 100%;
 	height: 100%;
-	/* Use flex to center SVGs horizontally, but align top vertically */
 	display: flex;
 	align-items: flex-start;
-	justify-content: center;
+	justify-content: flex-start;
 	padding-top: 10px;
-	/* Tabs are in header now, move to top */
+	padding-left: 10px;
 	z-index: 10;
 
 	/* Visibility Control */
