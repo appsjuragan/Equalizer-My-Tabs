@@ -1,6 +1,7 @@
 <link rel="stylesheet" type="text/css" href="popup.css" />
 <script src="snap.svg-min.js"></script>
-<script src="popup.js"></script>
+
+<script type="module" src="modules/main.js"></script>
 
 <body>
   <span id="warning"><em>Warning: Loud audio will damage hearing/speakers! Listen responsibly
@@ -25,14 +26,11 @@
     <label for="tab-2">Guide</label>
     <input id="tab-3" type="radio" name="tab-group" />
     <label for="tab-3">Active Tabs</label>
+    <span id="limiterIndicator">LIM</span>
     <div id="eqDiv">
       <svg id="gainSvg" width="30" height="300"></svg>
       <svg id="eqSvg" width="600" height="300"></svg>
-      <canvas id="webgpuCanvas" width="490" height="200"></canvas>
       <div id="eqOptionsDiv">
-        <button id="vizButton" class="on">
-          <span>Spectrum<br />Visualizer</span>
-        </button>
       </div>
     </div>
     <div id="guideDiv">
@@ -93,6 +91,7 @@
   </div>
   <div id="presetDiv">
     <button id="bassBoostButton">Bass Boost</button>
+    <button id="vizButton" class="on">Spectrum Visualizer</button>
     <select id="qualityModeSelect" title="Audio quality mode">
       <option value="efficient">Efficient</option>
       <option value="quality">Quality</option>

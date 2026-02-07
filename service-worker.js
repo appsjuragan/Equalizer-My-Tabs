@@ -169,6 +169,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         handleDeletePreset(msg);
     } else if (msg.type === 'importPresets') {
         handleImportPresets(msg);
+    } else if (msg.type === 'isTabStreaming') {
+        // Check if a specific tab is already being EQ'd
+        const isStreaming = state.activeStreams.includes(msg.tabId);
+        sendResponse({ streaming: isStreaming });
+        return true; // Keep channel open for async response
     } else if (msg.type === 'getFullRefresh' || msg.type === 'onPopupOpen') {
         ensureOffscreen().then(async () => {
             await initState();

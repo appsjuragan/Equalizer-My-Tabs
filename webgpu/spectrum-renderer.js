@@ -1,187 +1,181 @@
-// WebGPU Spectrum Renderer
-// Renders FFT data using compute/fragment shaders
+
+// Spectrum Renderer - Improved for Ears v2 (Canvas 2D)
+// Uses optimized drawing and logarithmic (quartic) frequency scaling to match EQ graph.
 
 class SpectrumRenderer {
     constructor(canvas) {
         this.canvas = canvas;
-        this.adapter = null;
-        this.device = null;
-        this.context = null;
-        this.pipeline = null;
-        this.frequencyBuffer = null;
-        this.uniformBuffer = null;
-        this.bindGroup = null;
-
+        this.ctx = null;
         this.isRunning = false;
         this.animationId = null;
+        this.frequencyData = null;
 
-        // Configuration
-        this.fftSize = 256; // Number of bars to render
-        this.barWidth = 2.0 / this.fftSize;
+        // Configuration matching EQ graph
+        this.width = canvas.width;
+        this.height = canvas.height;
+        this.smoothing = 0.5;
+        this.previousData = null;
+
+        // Logarithmic data buffer for smoother rendering
+        this.logData = new Float32Array(this.width);
     }
 
     async init() {
-        if (!navigator.gpu) {
-            console.error("WebGPU not supported on this browser.");
+        try {
+            this.ctx = this.canvas.getContext('2d');
+            if (!this.ctx) {
+                console.error("Canvas 2D context not available.");
+                return false;
+            }
+
+            console.log("Spectrum Renderer (Canvas 2D - Log Scale) initialized");
+            return true;
+        } catch (e) {
+            console.error("Failed to initialize spectrum renderer:", e);
             return false;
         }
-
-        this.adapter = await navigator.gpu.requestAdapter();
-        if (!this.adapter) {
-            console.error("No WebGPU adapter found.");
-            return false;
-        }
-
-        this.device = await this.adapter.requestDevice();
-        this.context = this.canvas.getContext('webgpu');
-
-        const format = navigator.gpu.getPreferredCanvasFormat();
-        this.context.configure({
-            device: this.device,
-            format: format,
-            alphaMode: 'premultiplied',
-        });
-
-        await this.initShaders(format);
-        await this.initBuffers();
-
-        console.log("WebGPU Spectrum Renderer initialized");
-        return true;
     }
 
-    async initShaders(format) {
-        // Load WGSL shader
-        const response = await fetch(chrome.runtime.getURL('webgpu/shaders/spectrum.wgsl'));
-        const shaderCode = await response.text();
-
-        const shaderModule = this.device.createShaderModule({
-            code: shaderCode
-        });
-
-        this.pipeline = this.device.createRenderPipeline({
-            layout: 'auto',
-            vertex: {
-                module: shaderModule,
-                entryPoint: 'vs_main',
-            },
-            fragment: {
-                module: shaderModule,
-                entryPoint: 'fs_main',
-                targets: [{
-                    format: format,
-                    blend: {
-                        color: {
-                            srcFactor: 'src-alpha',
-                            dstFactor: 'one-minus-src-alpha',
-                            operation: 'add',
-                        },
-                        alpha: {
-                            srcFactor: 'one',
-                            dstFactor: 'one-minus-src-alpha',
-                            operation: 'add',
-                        }
-                    }
-                }],
-            },
-            primitive: {
-                topology: 'triangle-list',
-            },
-        });
+    // Convert X (0..width) to Frequency (Hz) using EQ scaling
+    // Formula: freq = (x / width)^4 * 24000 (Nyquist for 48kHz)
+    xToFreq(x) {
+        return Math.pow(x / this.width, 4) * 24000; // Nyquist for 48kHz sample rate
     }
 
-    async initBuffers() {
-        // Uniform buffer (screen size, bar count)
-        const uniformData = new Float32Array([
-            this.canvas.width, this.canvas.height, // resolution
-            this.fftSize,                          // barCount
-            this.barWidth,                         // barWidth (NDC)
-            0.0                                    // padding
-        ]);
-
-        this.uniformBuffer = this.device.createBuffer({
-            size: uniformData.byteLength,
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-        });
-        this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
-
-        // Frequency data storage buffer
-        const frequencyDataSize = this.fftSize * 4; // float32
-        this.frequencyBuffer = this.device.createBuffer({
-            size: frequencyDataSize,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-        });
-
-        // Create bind group
-        this.bindGroup = this.device.createBindGroup({
-            layout: this.pipeline.getBindGroupLayout(0),
-            entries: [
-                {
-                    binding: 0,
-                    resource: { buffer: this.uniformBuffer },
-                },
-                {
-                    binding: 1,
-                    resource: { buffer: this.frequencyBuffer },
-                },
-            ],
-        });
+    // Get array index for a given freq
+    freqToIndex(freq, fftSize) {
+        // Nyquist = SampleRate / 2 = 24000 for 48kHz
+        // Bin size = SampleRate / FFT_SIZE
+        // Index = freq / (SampleRate / FFT_SIZE) = freq * FFT_SIZE / SampleRate
+        // Using 48000Hz sample rate to match AudioContext
+        return Math.floor(freq * fftSize / 48000);
     }
 
     updateFrequencyData(fftData) {
-        if (!this.device || !this.frequencyBuffer) return;
+        if (!fftData || fftData.length === 0) return;
 
-        // Map FFT data (0-255) to 0.0-1.0
-        // And resample to match bar count if needed
-        const data = new Float32Array(this.fftSize);
-
-        // Simple downsampling/averaging
-        const step = Math.floor(fftData.length / this.fftSize);
-
-        for (let i = 0; i < this.fftSize; i++) {
-            let sum = 0;
-            for (let j = 0; j < step; j++) {
-                sum += fftData[i * step + j] || 0;
-            }
-            // Normalize: input is likely -100dB to -30dB or linear
-            // Assuming linear for now based on AnalyserNode getByteFrequencyData
-            // If float data, it handles differently
-            data[i] = (sum / step) / 255.0;
+        // Calculate log-scaled data point for each X pixel
+        if (!this.logData || this.logData.length !== this.width) {
+            this.logData = new Float32Array(this.width);
+            this.previousData = new Float32Array(this.width);
         }
 
-        this.device.queue.writeBuffer(this.frequencyBuffer, 0, data);
+        const fftLen = fftData.length;
+
+        for (let x = 0; x < this.width; x++) {
+            // Calculate frequency range for this pixel
+            const f1 = this.xToFreq(x);
+            const f2 = this.xToFreq(x + 1);
+
+            const i1 = this.freqToIndex(f1, fftLen * 2); // fftData is half size (0..Nyquist)
+            const i2 = this.freqToIndex(f2, fftLen * 2);
+
+            let maxDb = -Infinity;
+            // Find max magnitude (dB) in bin range
+            // For low freqs, i1 might equal i2.
+            if (i2 <= i1) {
+                maxDb = fftData[i1] !== undefined ? fftData[i1] : -100;
+            } else {
+                for (let k = i1; k < i2 && k < fftLen; k++) {
+                    if (fftData[k] > maxDb) maxDb = fftData[k];
+                }
+            }
+
+            // Handle -Infinity (no signal) and clamp to reasonable range
+            if (!isFinite(maxDb) || maxDb < -100) maxDb = -100;
+            if (maxDb > 0) maxDb = 0;
+
+            // Convert dB to normalized value (0-1)
+            // AnalyserNode returns dB values typically -100 to 0
+            // Map: -100 dB -> 0.0, 0 dB -> 1.0
+            let normalizedVal = (maxDb + 100) / 100;
+
+            // Smooth falloff
+            const prev = this.previousData[x] || 0;
+            // asymmetrical smoothing: fast attack, slow decay
+            if (normalizedVal > prev) {
+                this.logData[x] = prev * 0.2 + normalizedVal * 0.8;
+            } else {
+                this.logData[x] = prev * 0.8 + normalizedVal * 0.2; // slower decay
+            }
+        }
+
+        // Swap or copy
+        for (let i = 0; i < this.width; i++) this.previousData[i] = this.logData[i];
     }
 
     render() {
-        if (!this.context || !this.pipeline) return;
+        if (!this.ctx || !this.logData) return;
 
-        const commandEncoder = this.device.createCommandEncoder();
-        const textureView = this.context.getCurrentTexture().createView();
+        const width = this.width;
+        const height = this.height;
 
-        const renderPassDescriptor = {
-            colorAttachments: [
-                {
-                    view: textureView,
-                    clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }, // Transparent background
-                    loadOp: 'clear',
-                    storeOp: 'store',
-                },
-            ],
-        };
+        // Clear canvas
+        this.ctx.clearRect(0, 0, width, height);
 
-        const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-        passEncoder.setPipeline(this.pipeline);
-        passEncoder.setBindGroup(0, this.bindGroup);
-        // Draw 6 vertices per bar (2 triangles)
-        passEncoder.draw(6 * this.fftSize);
-        passEncoder.end();
+        // Create gradient
+        const gradient = this.ctx.createLinearGradient(0, 0, 0, height);
+        // Colors from screenshot/original style (purple/blueish)
+        // Top (loud) -> Bottom (quiet)
+        gradient.addColorStop(0, "rgba(200, 200, 255, 0.4)");
+        gradient.addColorStop(0.5, "rgba(100, 100, 255, 0.2)");
+        gradient.addColorStop(1, "rgba(50, 50, 100, 0.1)");
 
-        this.device.queue.submit([commandEncoder.finish()]);
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, height);
+
+        for (let x = 0; x < width; x++) {
+            const val = this.logData[x];
+            // Scale: val 0..1 corresponds to -100dB .. 0dB.
+            // But EQ graph is -30dB .. +30dB (Height 300).
+            // -30dB corresponds to y ~ 300. +30dB corresponds to y ~ 0.
+            // 0dB corresponds to y ~ 150.
+            // -100dB corresponds to y ~ 500 (offscreen).
+
+            // However, typical music is -10..-20 RMS.
+            // Let's map val (0..1) to canvas height in a visually pleasing way for now,
+            // or try to match dB exactly if required.
+            // Usually visualizers fill 0 to height.
+            // If checking screenshot: curve goes up to maybe top 1/3?
+
+            // Let's implement a scaling factor.
+            // 1.0 (0dB) -> y = height * 0.1 (near top)
+            // 0.5 (-50dB) -> y = height.
+
+            // Heuristic scaling
+            // val is 0..1.
+            // If val=0 -> y=height.
+            // If val=1 -> y=height * 0.2?
+
+            const amplitude = val * 0.8; // Reduce amplitude slightly
+            const y = height * (1 - amplitude);
+            // Clamp
+            this.ctx.lineTo(x, y);
+        }
+
+        this.ctx.lineTo(width, height);
+        this.ctx.lineTo(0, height);
+        this.ctx.closePath();
+
+        this.ctx.fillStyle = gradient;
+        this.ctx.fill();
+
+        // Stroke
+        this.ctx.beginPath();
+        for (let x = 0; x < width; x++) {
+            const val = this.logData[x];
+            const y = height - (val * height * 0.8);
+            if (x === 0) this.ctx.moveTo(x, y);
+            else this.ctx.lineTo(x, y);
+        }
+        this.ctx.strokeStyle = "rgba(180, 180, 220, 0.6)";
+        this.ctx.lineWidth = 1.5;
+        this.ctx.stroke();
     }
 
     start() {
         if (this.isRunning) return;
         this.isRunning = true;
-
         const loop = () => {
             if (!this.isRunning) return;
             this.render();
@@ -192,9 +186,7 @@ class SpectrumRenderer {
 
     stop() {
         this.isRunning = false;
-        if (this.animationId) {
-            cancelAnimationFrame(this.animationId);
-            this.animationId = null;
-        }
+        if (this.animationId) cancelAnimationFrame(this.animationId);
+        if (this.ctx) this.ctx.clearRect(0, 0, this.width, this.height);
     }
 }

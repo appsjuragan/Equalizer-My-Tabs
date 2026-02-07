@@ -13,11 +13,28 @@ const fftChannel = new BroadcastChannel('ears_fft');
 // AudioWorklet node
 var audioWorkletNode = null;
 
+// AnalyserNode for spectrum visualization (provides proper dB data)
+var analyserNode = null;
+var fftLoopRunning = false;
+var currentLimiterReduction = 0;
+
 // Filter configuration
 const K = 11;
 const z = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 12000, 16000];
 
 async function initAudio() {
+    console.log("Offscreen init. Runtime URL:", chrome.runtime.getURL(''));
+
+    // Attempt to get our own tab ID if possible
+    try {
+        if (chrome.tabs && chrome.tabs.getCurrent) {
+            chrome.tabs.getCurrent(tab => {
+                if (tab) console.log("Offscreen Tab ID found:", tab.id);
+                else console.log("Offscreen Tab ID is null (expected).");
+            });
+        }
+    } catch (e) { console.log("Can't get current tab:", e); }
+
     if (Z) return;
 
     M = new AudioContext({
@@ -37,22 +54,26 @@ async function initAudio() {
     // Create AudioWorklet node
     audioWorkletNode = new AudioWorkletNode(M, 'ears-audio-processor');
 
-    // Handle messages from worklet
+    // Handle messages from worklet (only for limiter reduction now)
     audioWorkletNode.port.onmessage = (event) => {
         if (event.data.type === 'fftData') {
-            // Forward FFT data to popup via BroadcastChannel
-            fftChannel.postMessage({
-                type: 'fft',
-                fft: event.data.data
-            });
+            // Store limiter reduction for use in fftLoop
+            currentLimiterReduction = event.data.limiterReduction || 0;
         }
     };
 
-    // Connect to destination
+    // Connect worklet to destination
     audioWorkletNode.connect(M.destination);
 
+    // Create AnalyserNode for visualization (provides proper dB data like wip-mv3)
+    analyserNode = M.createAnalyser();
+    analyserNode.fftSize = 4096 * 2;
+    analyserNode.smoothingTimeConstant = 0.75;
+    // Connect worklet output to analyser for visualization
+    audioWorkletNode.connect(analyserNode);
+
     Z = true;
-    console.log('Audio initialized with AudioWorklet');
+    console.log('Audio initialized with AudioWorklet + AnalyserNode');
 }
 
 function updateFilter(msg) {
@@ -108,6 +129,8 @@ async function addStream(stream, tabId) {
         source: source
     };
 
+    chrome.runtime.sendMessage({ type: "streamStarted", tabId: tabId });
+
     const tracks = stream.getAudioTracks();
     if (tracks.length > 0) {
         tracks[0].onended = () => {
@@ -140,6 +163,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             break;
         case "eqTab":
             if (msg.streamId) {
+                // Check if we already have a stream for this tab
+                if (Y[msg.tabId]) {
+                    console.log("Tab already has active stream, skipping capture");
+                    break;
+                }
                 navigator.mediaDevices.getUserMedia({
                     audio: {
                         mandatory: {
@@ -150,11 +178,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                     video: false
                 }).then(stream => {
                     addStream(stream, msg.tabId);
-                }).catch(err => console.error(err));
+                }).catch(err => {
+                    console.error("Error capturing tab:", err.message);
+                    // Notify service worker about the error
+                    chrome.runtime.sendMessage({ type: "captureError", tabId: msg.tabId, error: err.message });
+                });
             } else if (msg.on === false) {
                 if (msg.tabId) removeStream(msg.tabId);
             }
             break;
+
         case "modifyFilter":
             updateFilter(msg);
             break;
@@ -209,5 +242,35 @@ function applyPreset(presetName, presetData) {
         updateGain(1);
     }
 }
+
+// FFT loop using AnalyserNode (like wip-mv3 branch)
+function fftLoop() {
+    if (!fftLoopRunning) return;
+
+    if (analyserNode) {
+        var array = new Float32Array(analyserNode.frequencyBinCount);
+        analyserNode.getFloatFrequencyData(array); // Returns dB values (-Infinity to 0)
+
+        fftChannel.postMessage({
+            type: 'fft',
+            fft: Array.from(array),
+            limiterReduction: currentLimiterReduction
+        });
+    }
+
+    setTimeout(fftLoop, 1000 / 30); // 30 FPS for visualizer
+}
+
+// Listen for FFT start/stop requests from popup
+fftChannel.onmessage = (event) => {
+    if (event.data.type === 'startFFT') {
+        if (!fftLoopRunning) {
+            fftLoopRunning = true;
+            fftLoop();
+        }
+    } else if (event.data.type === 'stopFFT') {
+        fftLoopRunning = false;
+    }
+};
 
 initAudio();

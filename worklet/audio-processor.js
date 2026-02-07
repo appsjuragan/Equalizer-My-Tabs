@@ -10,6 +10,7 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
         this.limiter = null;
         this.outputGain = 1.0;
         this.qualityMode = 'efficient';
+        this.minReduction = 1.0; // Linear max reduction (1.0 = none)
 
         // FFT analysis
         this.fftSize = 4096 * 2;
@@ -65,6 +66,7 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
 
     initFilters() {
         // Create biquad filter parameters for each band
+        // Each filter has separate state for left and right channels
         this.filters = this.centerFrequencies.map((freq, index) => ({
             type: index === 0 ? 'lowshelf' : (index === this.numFilters - 1 ? 'highshelf' : 'peaking'),
             frequency: freq,
@@ -73,9 +75,12 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
             // Biquad filter coefficients (will be calculated)
             b0: 1, b1: 0, b2: 0,
             a1: 0, a2: 0,
-            // State variables
-            x1: 0, x2: 0,
-            y1: 0, y2: 0
+            // State variables for LEFT channel
+            x1L: 0, x2L: 0,
+            y1L: 0, y2L: 0,
+            // State variables for RIGHT channel
+            x1R: 0, x2R: 0,
+            y1R: 0, y2R: 0
         }));
 
         this.updateAllFilterCoefficients();
@@ -83,11 +88,21 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
 
     getQForFrequency(freq) {
         // Frequency-dependent Q values
-        if (freq < 100) return 0.7;
-        if (freq < 500) return 0.9;
-        if (freq < 2000) return 1.1;
-        if (freq < 8000) return 1.3;
-        return 1.5;
+        let q = 1.0;
+        if (freq < 100) q = 0.7;
+        else if (freq < 500) q = 0.9;
+        else if (freq < 2000) q = 1.1;
+        else if (freq < 8000) q = 1.3;
+        else q = 1.5;
+
+        // Apply quality modifier
+        if (this.qualityMode === 'efficient') {
+            return q * 0.8; // Smoother, wider bands
+        } else if (this.qualityMode === 'quality') {
+            return q * 1.0; // Standard
+        } else { // hifi
+            return q * 1.2; // Sharper, narrower bands
+        }
     }
 
     updateAllFilterCoefficients() {
@@ -137,19 +152,33 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
         filter.a2 = a2 / a0;
     }
 
-    processBiquad(filter, input) {
-        // Direct Form II
-        const output = filter.b0 * input + filter.b1 * filter.x1 + filter.b2 * filter.x2
-            - filter.a1 * filter.y1 - filter.a2 * filter.y2;
+    processBiquad(filter, input, channel) {
+        // Direct Form II - with separate state per channel
+        const isLeft = channel === 'L';
+        const x1 = isLeft ? filter.x1L : filter.x1R;
+        const x2 = isLeft ? filter.x2L : filter.x2R;
+        const y1 = isLeft ? filter.y1L : filter.y1R;
+        const y2 = isLeft ? filter.y2L : filter.y2R;
+
+        const output = filter.b0 * input + filter.b1 * x1 + filter.b2 * x2
+            - filter.a1 * y1 - filter.a2 * y2;
 
         // Update state
-        filter.x2 = filter.x1;
-        filter.x1 = input;
-        filter.y2 = filter.y1;
-        filter.y1 = output;
+        if (isLeft) {
+            filter.x2L = filter.x1L;
+            filter.x1L = input;
+            filter.y2L = filter.y1L;
+            filter.y1L = output;
+        } else {
+            filter.x2R = filter.x1R;
+            filter.x1R = input;
+            filter.y2R = filter.y1R;
+            filter.y1R = output;
+        }
 
         return output;
     }
+
 
     softLimit(input, threshold) {
         // Simple soft limiter
@@ -160,6 +189,13 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
 
         const excess = absInput - threshold;
         const limited = threshold + excess / (1 + excess);
+
+        // Track reduction (ratio)
+        const currentRatio = limited / absInput;
+        if (currentRatio < this.minReduction) {
+            this.minReduction = currentRatio;
+        }
+
         return input > 0 ? limited : -limited;
     }
 
@@ -287,40 +323,50 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
         const input = inputs[0];
         const output = outputs[0];
 
-        if (!input || !input[0]) {
+        if (!input || input.length === 0) {
             return true;
         }
 
-        const inputChannel = input[0];
-        const outputChannel = output[0];
-        const blockSize = inputChannel.length;
+        const numChannels = Math.min(input.length, output.length);
+        const blockSize = input[0].length;
 
         // Select Engine: Wasm (Priority) or JS (Fallback)
         if (this.wasmLoaded && this.wasmDSP) {
-            return this.processWasm(inputChannel, outputChannel, blockSize);
+            return this.processWasm(input[0], output[0], blockSize);
         }
 
-        // JS Fallback Processing
-        // Process each sample
-        for (let i = 0; i < blockSize; i++) {
-            let sample = inputChannel[i];
+        // JS Fallback Processing - Handle stereo
+        const threshold = this.qualityMode === 'efficient' ? 0.89 :
+            this.qualityMode === 'quality' ? 0.94 : 0.96;
 
-            // Apply filter chain
-            for (let f = 0; f < this.numFilters; f++) {
-                sample = this.processBiquad(this.filters[f], sample);
+        for (let ch = 0; ch < numChannels; ch++) {
+            const inputChannel = input[ch];
+            const outputChannel = output[ch];
+            const channelId = ch === 0 ? 'L' : 'R';
+
+            for (let i = 0; i < blockSize; i++) {
+                let sample = inputChannel[i];
+
+                // Apply filter chain
+                for (let f = 0; f < this.numFilters; f++) {
+                    sample = this.processBiquad(this.filters[f], sample, channelId);
+                }
+
+                // Apply output gain
+                sample *= this.outputGain;
+
+                // Soft limiting
+                sample = this.softLimit(sample, threshold);
+
+                outputChannel[i] = sample;
             }
+        }
 
-            // Apply output gain
-            sample *= this.outputGain;
-
-            // Soft limiting
-            const threshold = this.qualityMode === 'efficient' ? 0.89 :
-                this.qualityMode === 'quality' ? 0.94 : 0.96;
-            sample = this.softLimit(sample, threshold);
-
-            outputChannel[i] = sample;
-
-            // Collect samples for FFT
+        // Collect samples for FFT (use left channel or mono mix)
+        const fftSource = numChannels === 1 ? output[0] : output[0];
+        for (let i = 0; i < blockSize; i++) {
+            // Use left channel for visualization (or mix if stereo)
+            let sample = numChannels === 2 ? (output[0][i] + output[1][i]) * 0.5 : output[0][i];
             this.fftBuffer[this.fftPosition++] = sample;
             if (this.fftPosition >= this.fftSize) {
                 this.fftPosition = 0;
@@ -333,18 +379,27 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
             this.fftCounter = 0;
 
             // Perform JS FFT (fallback until Wasm is ready)
-            // Use current buffer contents (with circular logic if needed, but buffer is large enough)
-            // Ideally align starting position, but simple slice works for visualizer
             const fftData = this.performFFT(this.fftBuffer);
+
+            // Calculate dB reduction
+            let reductionDb = 0;
+            if (this.minReduction < 1.0) {
+                // Safety for log10
+                reductionDb = 20 * Math.log10(Math.max(1e-6, this.minReduction));
+            }
+            // Reset for next frame
+            this.minReduction = 1.0;
 
             this.port.postMessage({
                 type: 'fftData',
-                data: fftData
+                data: fftData,
+                limiterReduction: reductionDb
             });
         }
 
         return true;
     }
+
 }
 
 registerProcessor('ears-audio-processor', EarsAudioProcessor);

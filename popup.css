@@ -181,6 +181,7 @@ html {
 h1,
 h2,
 h3,
+h4,
 #pl,
 #lt {
 	color: wheat;
@@ -300,14 +301,7 @@ button :focus {}
 	left: -16;
 }
 
-#vizButton {
-	font-size: 10px;
-	-webkit-transform: rotate(-90deg);
-	-moz-transform: rotate(-90deg);
-	-ms-transform: rotate(-90deg);
-	-o-transform: rotate(-90deg);
-	transform: rotate(-90deg);
-}
+#vizButton {}
 
 #vizButton.on {
 	background-color: wheat;
@@ -369,20 +363,28 @@ button :focus {}
 
 /* Limiter indicator */
 #limiterIndicator {
+	position: absolute;
+	top: 26px;
+	/* Aligned with tabs */
+	right: 15px;
+	/* Far right */
+	font-family: sans-serif;
+	font-weight: bold;
 	font-size: 10px;
-	color: #666;
-	margin-left: 5px;
+	color: #555;
+	background-color: #222;
 	padding: 2px 4px;
-	border: 1px solid #666;
 	border-radius: 3px;
 	opacity: 0.3;
-	transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+	transition: all 0.1s;
+	pointer-events: none;
+	z-index: 1000;
 }
 
 #limiterIndicator.active {
+	color: #ff5555;
 	opacity: 1;
-	color: #ff6b6b;
-	border-color: #ff6b6b;
+	box-shadow: 0 0 5px rgba(255, 85, 85, 0.4);
 	animation: limiter-pulse 0.5s ease infinite;
 }
 
@@ -409,18 +411,4 @@ button :focus {}
 
 #qualityModeSelect.hifi {
 	border-color: #9C27B0;
-}
-
-/* WebGPU Canvas */
-#webgpuCanvas {
-	position: absolute;
-	top: 0;
-	left: 0;
-	pointer-events: none;
-	opacity: 0;
-	transition: opacity 0.5s;
-}
-
-#webgpuCanvas.active {
-	opacity: 0.5;
 }
