@@ -2,6 +2,8 @@
 // Handles real-time audio processing using Web Audio API
 import init, { JuraganAudioDSP } from './juragan_audio_dsp.js';
 
+console.log("JuraganAudio Processor loaded successfully");
+
 class JuraganAudioProcessor extends AudioWorkletProcessor {
     constructor(options) {
         super();
