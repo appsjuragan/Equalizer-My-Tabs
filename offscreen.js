@@ -8,7 +8,7 @@ var Z = false; // Is Audio Initialized
 // Quality mode settings
 var qualityMode = 'efficient'; // 'efficient', 'quality', 'hifi'
 
-const fftChannel = new BroadcastChannel('ears_fft');
+const fftChannel = new BroadcastChannel('juragan_audio_fft');
 
 // AudioWorklet node
 var audioWorkletNode = null;
@@ -52,12 +52,12 @@ async function initAudio() {
     }
 
     // Load and compile Wasm module
-    const response = await fetch(chrome.runtime.getURL('worklet/ears_dsp_bg.wasm'));
+    const response = await fetch(chrome.runtime.getURL('worklet/juragan_audio_dsp_bg.wasm'));
     const bytes = await response.arrayBuffer();
     const wasmModule = await WebAssembly.compile(bytes);
 
     // Create AudioWorklet node
-    audioWorkletNode = new AudioWorkletNode(M, 'ears-audio-processor', {
+    audioWorkletNode = new AudioWorkletNode(M, 'juragan-audio-processor', {
         processorOptions: {
             wasmModule: wasmModule
         }

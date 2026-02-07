@@ -1,8 +1,8 @@
-// AudioWorklet Processor for Ears Extension
+// AudioWorklet Processor for JuraganAudio Extension
 // Handles real-time audio processing using Web Audio API
-import init, { EarsDSP } from './ears_dsp.js';
+import init, { JuraganAudioDSP } from './juragan_audio_dsp.js';
 
-class EarsAudioProcessor extends AudioWorkletProcessor {
+class JuraganAudioProcessor extends AudioWorkletProcessor {
     constructor(options) {
         super();
         this.wasmModule = options?.processorOptions?.wasmModule;
@@ -80,8 +80,8 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
             const instance = await init({ module_or_path: this.wasmModule });
             this.wasmMemory = instance.memory;
 
-            this.wasmDSP_L = new EarsDSP(this.sampleRate);
-            this.wasmDSP_R = new EarsDSP(this.sampleRate);
+            this.wasmDSP_L = new JuraganAudioDSP(this.sampleRate);
+            this.wasmDSP_R = new JuraganAudioDSP(this.sampleRate);
 
             this.wasmLoaded = true;
             console.log('Wasm DSP loaded and initialized (Stereo)');
@@ -457,4 +457,4 @@ class EarsAudioProcessor extends AudioWorkletProcessor {
     }
 }
 
-registerProcessor('ears-audio-processor', EarsAudioProcessor);
+registerProcessor('juragan-audio-processor', JuraganAudioProcessor);

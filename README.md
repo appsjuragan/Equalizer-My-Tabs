@@ -1,6 +1,6 @@
-# 🎧 Ears Audio Toolkit
+# 🎧 JuraganAudio Toolkit
 
-Ears is a powerful, real-time audio equalizer extension for Google Chrome. It allows you to EQ any audio you find on the web, live! Bass boost, dim the highs, up the vocals — all with a few clicks.
+JuraganAudio is a powerful, real-time audio equalizer extension for Google Chrome. It allows you to EQ any audio you find on the web, live! Bass boost, dim the highs, up the vocals — all with a few clicks.
 
 ## ✨ Features
 
@@ -31,11 +31,8 @@ Ears is a powerful, real-time audio equalizer extension for Google Chrome. It al
 ## 🚀 Getting Started
 
 1. **Install**: Load as an unpacked extension in Chrome.
-2. **Activate**: Click the Ears icon in your toolbar to add the current tab to Ears.
+2. **Activate**: Click the JuraganAudio icon in your toolbar to add the current tab to JuraganAudio.
 3. **Adjust**: Drag the dots on the graph to change frequencies and gain.
-   - **Vertical**: Volume (Gain)
-   - **Horizontal**: Frequency
-   - **Shift + Vertical**: Width (Q-factor)
 4. **Quality Mode**: Select your preferred quality/CPU tradeoff from the dropdown
 5. **Save**: Type a name and click "+ Save Preset" to keep your settings.
 

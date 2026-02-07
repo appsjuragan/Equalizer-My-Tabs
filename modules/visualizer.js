@@ -1,5 +1,5 @@
 
-const FFT_CHANNEL_NAME = 'ears_fft';
+const FFT_CHANNEL_NAME = 'juragan_audio_fft';
 const VISUALIZER_KEY = "SHOW_VISUALIZER";
 
 // Visualization constants (from wip-mv3)
