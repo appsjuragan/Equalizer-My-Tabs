@@ -1,29 +1,48 @@
 :root {
-	/* "Future Neon" Palette */
+	/* Dark Mode (Default) */
 	--bg-void: #090a0c;
 	--bg-glass: rgba(22, 24, 29, 0.7);
 	--bg-glass-border: rgba(255, 255, 255, 0.08);
+	--header-bg: rgba(9, 10, 12, 0.8);
+	--dashboard-bg: rgba(13, 14, 18, 0.98);
 
 	--color-primary: #818cf8;
-	/* Soft Indigo */
 	--color-primary-glow: rgba(129, 140, 248, 0.4);
-
 	--color-accent: #22d3ee;
-	/* Cyan */
 	--color-accent-glow: rgba(34, 211, 238, 0.4);
 
 	--text-main: #f3f4f6;
 	--text-muted: #9ca3af;
+	--input-bg: rgba(255, 255, 255, 0.05);
+	--dropdown-bg: #1e1b4b;
 
-	--gradient-main: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+	--gradient-stop: #1e1b4b;
 
 	--radius-sm: 8px;
 	--radius-md: 12px;
 	--radius-lg: 16px;
-
 	--font-family: 'Inter', system-ui, -apple-system, sans-serif;
-
 	--anim-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.light-mode {
+	--bg-void: #f3f4f6;
+	--bg-glass: rgba(255, 255, 255, 0.7);
+	--bg-glass-border: rgba(0, 0, 0, 0.1);
+	--header-bg: rgba(243, 244, 246, 0.8);
+	--dashboard-bg: #e5e7eb;
+
+	--color-primary: #4f46e5;
+	--color-primary-glow: rgba(79, 70, 229, 0.2);
+	--color-accent: #0891b2;
+	--color-accent-glow: rgba(8, 145, 178, 0.1);
+
+	--text-main: #1f2937;
+	--text-muted: #4b5563;
+	--input-bg: rgba(0, 0, 0, 0.08);
+	--dropdown-bg: #ffffff;
+
+	--gradient-stop: #d1d5db;
 }
 
 /* Reset & Base */
@@ -54,7 +73,7 @@ body {
 	position: relative;
 	height: 340px;
 	flex-shrink: 0;
-	background: radial-gradient(circle at 50% -20%, #1e1b4b 0%, var(--bg-void) 60%);
+	background: radial-gradient(circle at 50% -20%, var(--gradient-stop) 0%, var(--bg-void) 70%);
 }
 
 a {
@@ -75,7 +94,7 @@ body>h1 {
 	font-size: 15px;
 	font-weight: 600;
 	letter-spacing: -0.01em;
-	background: rgba(9, 10, 12, 0.8);
+	background: var(--header-bg);
 	backdrop-filter: blur(10px);
 	border-bottom: 1px solid var(--bg-glass-border);
 	margin: 0;
@@ -112,13 +131,40 @@ body>input[type="radio"] {
 	z-index: 20;
 
 	display: flex;
-	background: rgba(255, 255, 255, 0.05);
-	/* Keep pill background */
+	align-items: center;
+	background: var(--input-bg);
 	border: 1px solid var(--bg-glass-border);
 	border-radius: 99px;
 	padding: 2px;
-	/* Smaller padding */
-	gap: 0;
+	gap: 4px;
+}
+
+#themeToggle {
+	width: 26px;
+	height: 26px;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(255, 255, 255, 0.1);
+	border: none;
+	border-radius: 50%;
+	cursor: pointer;
+	font-size: 14px;
+	transition: background 0.3s;
+	color: var(--text-main);
+}
+
+#themeToggle:hover {
+	background: rgba(255, 255, 255, 0.2);
+}
+
+body.light-mode #themeToggle {
+	background: rgba(0, 0, 0, 0.05);
+}
+
+body.light-mode #themeToggle:hover {
+	background: rgba(0, 0, 0, 0.1);
 }
 
 /* Individual Tab Pills */
@@ -152,7 +198,14 @@ body>input#tab-3:checked~h1 #tabNav label[for="tab-3"] {
 	background: rgba(255, 255, 255, 0.15);
 	color: var(--text-main);
 	box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
-	/* Glow effect */
+}
+
+body.light-mode>input#tab-1:checked~h1 #tabNav label[for="tab-1"],
+body.light-mode>input#tab-2:checked~h1 #tabNav label[for="tab-2"],
+body.light-mode>input#tab-3:checked~h1 #tabNav label[for="tab-3"] {
+	background: #fff;
+	color: var(--color-primary);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 #tabNav label:hover {
@@ -372,7 +425,7 @@ body>input#tab-3:checked~#mainDiv #tabsDiv {
 #bottomControls {
 	position: relative;
 	width: 100%;
-	background: rgba(13, 14, 18, 0.98);
+	background: var(--dashboard-bg);
 	backdrop-filter: blur(20px);
 	border-bottom: 1px solid var(--bg-glass-border);
 	padding: 8px 16px;
@@ -506,7 +559,7 @@ select,
 input {
 	border-radius: var(--radius-sm);
 	transition: all var(--anim-fast);
-	background: rgba(255, 255, 255, 0.05);
+	background: var(--input-bg);
 	color: var(--text-main);
 	border: 1px solid var(--bg-glass-border);
 	outline: none;
@@ -517,9 +570,8 @@ input {
 }
 
 select option {
-	background: #1e1b4b;
-	/* Dark background for dropdown options */
-	color: #fff;
+	background: var(--dropdown-bg);
+	color: var(--text-main);
 }
 
 button:hover,

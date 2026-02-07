@@ -51,8 +51,8 @@ Ears is a powerful, real-time audio equalizer extension for Google Chrome. It al
 
 - [x] ~~Migrate to Manifest V3~~
 - [x] ~~Add sound quality improvements~~
+- [x] ~~Implement Dark/Light mode themes~~
 - [ ] Add more built-in presets (Cinema, Voice, Night Mode)
-- [ ] Implement Dark/Light mode themes
 - [ ] Add spatial audio/stereo widening effects
 
 ---

@@ -1,32 +1,11 @@
-
 import * as EQGraph from './eq-graph.js';
 import * as EQMath from './eq-math.js';
 import * as Visualizer from './visualizer.js';
 import * as Presets from './presets.js';
 
-let isFirstLoad = true; // i
-const PRO_LIMIT = 3; // p (number of free presets allowed?) Original: var p = null; if (p && ...) -> wait.
-// Original: var p = null;
-// Later `if (p && userPresetSpan.children.length >= p + 1)` implies p is max presets?
-// But `p` is initialized to null.
-// Ah, `p` comes from scope?
-// Original: `var p = null; var N = function () { };`
-// No logic sets `p` to anything other than null in what I saw?
-// Wait, maybe I missed something.
-// Line 11: `var p = null;`
-// Line 12: `var t = localStorage;` (duplicate)
-// Maybe `p` is meant to be set by some pro check?
-// But I don't see any code setting `p`.
-// Wait, `H` (toggle visualizer) checks `if (p) return;` (if p is truthy, feature locked?)
-// If `p` is null, features are UNLOCKED?
-// But `if (p && length >= p+1)` suggests `p` is limit.
-// If `p` is null, `p+1` is 1? No `null + 1` is 1.
-// If `p` is null, `p && ...` is false. So no limit.
-// So `p=null` means PRO UNLOCKED or NO LIMIT?
-// Original comments: "Analytics removed". Maybe license check removed?
-// I will keep `p = null` for now to maintain behavior (unlimited).
-
-const MAX_PRESETS = null; // p
+let isFirstLoad = true;
+const PRO_LIMIT = 5;
+const MAX_PRESETS = null; // No hard limit by default
 
 document.addEventListener("DOMContentLoaded", () => {
     initUI();
@@ -328,16 +307,27 @@ function initUI() {
         });
     });
 
-    // Restore last tab
-    const lastTab = localStorage["last-tab"];
-    if (lastTab) {
-        const el = document.getElementById(lastTab);
-        if (el) el.click();
+    // Theme Toggle
+    const themeBtn = document.getElementById("themeToggle");
+    const body = document.body;
+
+    // Load saved theme
+    if (localStorage["theme"] === "light") {
+        body.classList.add("light-mode");
     }
+
+    themeBtn.onclick = () => {
+        body.classList.toggle("light-mode");
+        const isLight = body.classList.contains("light-mode");
+        localStorage["theme"] = isLight ? "light" : "dark";
+        // Notify graph to redraw with new theme colors if necessary
+        chrome.runtime.sendMessage({ type: "getFullRefresh" });
+    };
 
     // Fullscreen link hide
     if (window.innerWidth && window.innerWidth > 1000) {
-        document.getElementById("fullscreen-link").style.display = "none";
+        const fsLink = document.getElementById("fullscreen-link");
+        if (fsLink) fsLink.style.display = "none";
     }
 }
 

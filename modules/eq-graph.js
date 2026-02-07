@@ -1,9 +1,9 @@
 
 import * as EQMath from './eq-math.js';
 
-let eqSvg = null; // I
-let gainSvg = null; // x
-let filterLines = {}; // R
+let eqSvg = null;
+let gainSvg = null;
+let filterLines = {};
 let sampleRate = 44100;
 
 // Callbacks for message passing
@@ -61,6 +61,17 @@ export function drawEQ(filters, gainVal) {
     // Draw grid
     drawGrid(eqSvg);
 
+    // Draw Gain Line (Dashed)
+    const isLight = document.body.classList.contains("light-mode");
+    const gainLineColor = isLight ? "#1f2937" : "#f3f4f6";
+    eqSvg.line(0, gainVal.y, EQMath.WIDTH, gainVal.y)
+        .attr({
+            stroke: gainLineColor,
+            "stroke-dasharray": "5,5",
+            "stroke-opacity": 0.3,
+            "pointer-events": "none"
+        }).addClass("gainIndicatorLine");
+
     // Draw Gain Slider
     drawGainSlider(gainVal);
 
@@ -69,23 +80,24 @@ export function drawEQ(filters, gainVal) {
 }
 
 function drawGainSlider(gainObj) {
-    // gainObj has .y (gain to Y) and .gain (value)
-    // Actually the original passed {gain: ..., y: ...} as second arg to $
+    const isLight = document.body.classList.contains("light-mode");
+    const mutedColor = isLight ? "#6b7280" : "#9ca3af";
+    const mainColor = isLight ? "#1f2937" : "#f3f4f6";
 
     const midX = EQMath.GAIN_WIDTH / 2;
     const y0 = EQMath.gainToY(EQMath.MIN_GAIN); // k = -30
     const y1 = EQMath.gainToY(EQMath.MAX_GAIN); // u = 30
     const yZero = EQMath.gainToY(0);
 
-    gainSvg.line(midX, y0, midX, y1).attr({ stroke: "#9ca3af", opacity: 0.3 });
+    gainSvg.line(midX, y0, midX, y1).attr({ stroke: mutedColor, opacity: 0.3 });
 
     gainSvg.text(midX, 10, "Vol")
-        .attr({ fill: "#9ca3af", "text-anchor": "middle", "font-size": 9, "font-weight": "bold" });
+        .attr({ fill: mutedColor, "text-anchor": "middle", "font-size": 9, "font-weight": "bold" });
 
-    gainSvg.line(midX - 5, yZero, midX + 5, yZero).attr({ stroke: "#9ca3af" });
+    gainSvg.line(midX - 5, yZero, midX + 5, yZero).attr({ stroke: mutedColor });
 
     const dragLine = gainSvg.line(0, gainObj.y, EQMath.GAIN_WIDTH, gainObj.y)
-        .attr({ stroke: "#f3f4f6", "stroke-width": 5, cursor: "ns-resize" })
+        .attr({ stroke: mainColor, "stroke-width": 5, cursor: "ns-resize" })
         .addClass("gainLine");
 
     dragLine.drag(
@@ -132,23 +144,27 @@ function drawAllCurves(filters) { // re
 }
 
 function drawGrid(svg) { // ae
+    const isLight = document.body.classList.contains("light-mode");
+    const labelColor = isLight ? "#4b5563" : "#6b7280";
+    const gridOpacity = isLight ? 0.12 : 0.08;
+
     // Draw vertical frequency lines
     const maxFreq = EQMath.MAX_FREQ;
     for (let freq = 5; freq < maxFreq; freq *= 2) {
         const x = EQMath.freqToX(freq);
-        svg.line(x, 0, x, EQMath.HEIGHT).attr({ stroke: "#9ca3af", "stroke-opacity": 0.08 }); // Full vertical lines
+        svg.line(x, 0, x, EQMath.HEIGHT).attr({ stroke: "#9ca3af", "stroke-opacity": gridOpacity }); // Full vertical lines
         svg.line(x, EQMath.HEIGHT, x, EQMath.HEIGHT - 10).attr({ stroke: "#9ca3af", "stroke-opacity": 0.3 });
         svg.text(x, EQMath.HEIGHT - 12, "" + Math.round(xToFreqForLabel(x)))
-            .attr({ fill: "#6b7280", "text-anchor": "middle", "font-size": 8 });
+            .attr({ fill: labelColor, "text-anchor": "middle", "font-size": 8 });
     }
 
     // Draw horizontal gain lines
     const step = 5;
     for (let g = EQMath.MIN_GAIN; g <= EQMath.MAX_GAIN; g += step) {
         const y = EQMath.gainToY(g);
-        svg.line(0, y, EQMath.WIDTH, y).attr({ stroke: "#9ca3af", "stroke-opacity": 0.08 }); // Full horizontal lines
+        svg.line(0, y, EQMath.WIDTH, y).attr({ stroke: "#9ca3af", "stroke-opacity": gridOpacity }); // Full horizontal lines
         svg.text(4, y - 2, "" + g)
-            .attr({ fill: "#6b7280", "font-size": 8, "dominant-baseline": "auto" });
+            .attr({ fill: labelColor, "font-size": 8, "dominant-baseline": "auto" });
     }
 }
 
@@ -189,6 +205,13 @@ function onDragGain(element, gainObj) { // oe
         this.attr({
             transform: this.data("origTransform") + (this.data("origTransform") ? "T" : "t") + [0, dy]
         });
+
+        // Update the horizontal indicator line on eqSvg if it exists
+        const indicatorLine = document.querySelector(".gainIndicatorLine");
+        if (indicatorLine) {
+            indicatorLine.setAttribute("y1", relY);
+            indicatorLine.setAttribute("y2", relY);
+        }
 
         if (onGainChange) onGainChange(gainObj.gain);
     };
