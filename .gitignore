@@ -1,1 +1,6 @@
-src/dsp/target/*
+src/dsp/target/
+node_modules/
+.DS_Store
+*.log
+dist/
+pkg/
