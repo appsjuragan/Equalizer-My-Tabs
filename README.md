@@ -52,6 +52,7 @@ JuraganAudio is a powerful, real-time audio equalizer extension for Google Chrom
 - [x] ~~Full Rust DSP / WebAssembly integration~~
 - [ ] Add more built-in presets (Cinema, Voice, Night Mode)
 - [ ] Add spatial audio/stereo widening effects
+- [ ] Migrate visualizer to Webgl2
 
 ## 📄 License
 
