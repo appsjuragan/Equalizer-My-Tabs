@@ -35,9 +35,24 @@ export async function initState() {
     state.qualityMode = data.QUALITY_MODE || 'efficient';
 
     // Load new settings
-    if (data.SBR_OPTIONS) state.sbrOptions = JSON.parse(data.SBR_OPTIONS);
-    if (data.LIMITER_OPTIONS) state.limiterOptions = JSON.parse(data.LIMITER_OPTIONS);
-    if (data.VISUALIZER_FPS) state.visualizerFps = parseInt(data.VISUALIZER_FPS) || 30;
+    // Load new settings
+    if (data.SBR_OPTIONS) {
+        state.sbrOptions = JSON.parse(data.SBR_OPTIONS);
+    } else {
+        state.sbrOptions = { enabled: false, gain: 1.0 };
+    }
+
+    if (data.LIMITER_OPTIONS) {
+        state.limiterOptions = JSON.parse(data.LIMITER_OPTIONS);
+    } else {
+        state.limiterOptions = { enabled: true, attack: 0.1 };
+    }
+
+    if (data.VISUALIZER_FPS) {
+        state.visualizerFps = parseInt(data.VISUALIZER_FPS) || 30;
+    } else {
+        state.visualizerFps = 30;
+    }
 
     const syncData = await chrome.storage.sync.get(null);
     state.presets = {};

@@ -19,7 +19,8 @@ export async function sendFullStatus() {
         qualityMode: state.qualityMode,
         sbrOptions: state.sbrOptions,
         limiterOptions: state.limiterOptions,
-        visualizerFps: state.visualizerFps
+        visualizerFps: state.visualizerFps,
+        presets: state.presets
     });
 
     // Also current tab status

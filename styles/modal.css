@@ -124,6 +124,17 @@
     transform: translateY(-1px);
 }
 
+.modal-btn.danger {
+    background: #991b1b;
+    color: #fee2e2;
+    border: 1px solid #7f1d1d;
+}
+
+.modal-btn.danger:hover {
+    background: #b91c1c;
+    color: #fff;
+}
+
 input:checked~.switch-text.on {
     opacity: 1;
 }

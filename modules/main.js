@@ -102,16 +102,6 @@ function initMessaging() {
             EQGraph.setSampleRate(msg.Fs);
             console.log("Set sample rate to " + msg.Fs);
         }
-        else if (msg.type === "sendPresets") {
-            Presets.updatePresetsUI(msg.presets, (name) => {
-                chrome.runtime.sendMessage({ type: "preset", preset: name });
-                // Update input
-                const input = document.getElementById("presetNameInput");
-                if (input) input.value = name;
-                showMessage("Preset '" + name + "' loaded.");
-            });
-        }
-
     });
 }
 
@@ -137,7 +127,7 @@ function updateWorkspace(data) { // J
         };
     }).filter(f => f !== null);
 
-    const gainVal = data.gain || 0; // The stored 'master gain' usually 1.0 (0dB)??
+    const gainVal = (data.gain !== undefined) ? data.gain : 1;
     // Wait, original: `i.gain = e.gain || 1; i.y = F(fe(i.gain));`
     // `e.gain` seems to be linear gain (1.0 = 0dB).
     // `fe(i.gain)` converts to dB.
@@ -155,6 +145,23 @@ function updateWorkspace(data) { // J
 
     // Update Settings UI
     updateSettingsUI(data);
+
+    // Update Presets UI (and check for match)
+    if (data.presets && data.eqFilters) {
+        // Convert eqFilters back to normalized form for comparison if needed?
+        // No, eqFilters in data comes from SW in format:
+        // { frequency, gain, type, q }
+        // updatePresetsUI expects array of objects with {frequency, gain, q}.
+        // data.eqFilters should work directly.
+        Presets.updatePresetsUI(data.presets, (name) => {
+            chrome.runtime.sendMessage({ type: "preset", preset: name });
+            // UI update handled by re-render via updatePresetsUI logic on next status
+            // But we can also proactively set input here if we want immediate feedback
+            // though the function clears input.
+            // Wait, clicking option calls onPresetClick.
+            // And sets input.value in presets.js onchange handler.
+        }, data.eqFilters, gainVal);
+    }
 }
 
 function updateTabsList(streams) {
@@ -512,9 +519,23 @@ function initSettingsUI() {
         limiterAttack.value = 100;
         limiterAttackValue.textContent = "100ms";
 
-        vizFps.value = 30;
         vizFpsValue.textContent = "30 fps";
     };
+
+    // Full Reset
+    const fullResetBtn = document.getElementById("settingsFullResetBtn");
+    if (fullResetBtn) {
+        fullResetBtn.onclick = () => {
+            if (window.confirm("Are you sure you want to perform a FULL RESET? This will delete ALL saved presets and restore all settings to default.")) {
+                chrome.runtime.sendMessage({ type: "fullReset" });
+                modal.classList.remove("show");
+                showMessage("Performing full reset...");
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            }
+        };
+    }
 }
 
 // Hook into existing updateWorkspace

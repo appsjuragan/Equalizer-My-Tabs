@@ -29,3 +29,13 @@ export async function ensureOffscreen() {
         });
     }
 }
+
+export async function resetOffscreen() {
+    if (await chrome.offscreen.hasDocument()) {
+        try {
+            await chrome.offscreen.closeDocument();
+        } catch (e) {
+            console.error("Error closing offscreen document:", e);
+        }
+    }
+}

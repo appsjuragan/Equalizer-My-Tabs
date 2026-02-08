@@ -1,11 +1,11 @@
 // Service Worker for JuraganAudio Toolkit (Manifest V3) with Quality Modes
 
 import { state, initState, K, z, H, PRESETS_PREFIX } from './modules/service_worker/state.js';
-import { ensureOffscreen } from './modules/service_worker/offscreen.js';
+import { ensureOffscreen, resetOffscreen } from './modules/service_worker/offscreen.js';
 import { sendFullStatus, handleSavePreset, handleDeletePreset, handleImportPresets } from './modules/service_worker/messaging.js';
 
 // Message Listener
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     // Offscreen to SW updates
     if (msg.type === "streamStarted") {
         if (!state.activeStreams.includes(msg.tabId)) {
@@ -126,6 +126,32 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             sendFullStatus();
             chrome.runtime.sendMessage(msg); // Forward wake up
         });
+    } else if (msg.type === 'fullReset') {
+        // Clear all storage
+        await chrome.storage.local.clear();
+        await chrome.storage.sync.clear();
+
+        // Reset in-memory state
+        await initState();
+
+        // Send reset signals
+        // We might want to explicitly reset filters in audio processor too
+        state.gain = 1;
+        state.activeStreams = [];
+
+        // KILL OFFSCREEN to stop all audio and reset engine
+        await resetOffscreen();
+
+        // Re-initialize default state
+        await ensureOffscreen();
+        // Since we killed it, ensureOffscreen creates it and sends message via onComplete or inside logic?
+        // ensureOffscreen calls sendMessage.
+        // We probably also want to sendFullStatus?
+        // Yes, ensureOffscreen logic inside offscreen.js sends initialState.
+        // But we need to sendFullStatus too to update popup if open.
+        // wait... ensureOffscreen sends initialState.
+        // But sendFullStatus sends 'sendWorkspaceStatus' which popup listens to.
+        sendFullStatus(); // Send full status to popup
     }
 });
 
