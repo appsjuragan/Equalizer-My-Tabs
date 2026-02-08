@@ -1,5 +1,13 @@
 /* @ts-self-types="./juragan_audio_dsp.d.ts" */
 
+/**
+ * @enum {0 | 1}
+ */
+export const DetectorMode = Object.freeze({
+    Peak: 0, "0": "Peak",
+    Rms: 1, "1": "Rms",
+});
+
 export class DynamicsProcessor {
     __destroy_into_raw() {
         const ptr = this.__wbg_ptr;
@@ -48,14 +56,11 @@ export class DynamicsProcessor {
     /**
      * @param {number} threshold
      * @param {number} knee
-     * @param {number} detector_mode
+     * @param {DetectorMode} detector_mode
      * @param {number} lookahead_ms
      * @param {number} rms_time_ms
      */
     set_limiter_params(threshold, knee, detector_mode, lookahead_ms, rms_time_ms) {
-        if (!wasm.dynamicsprocessor_set_limiter_params) {
-            return;
-        }
         wasm.dynamicsprocessor_set_limiter_params(this.__wbg_ptr, threshold, knee, detector_mode, lookahead_ms, rms_time_ms);
     }
 }
@@ -150,14 +155,11 @@ export class JuraganAudioDSP {
     /**
      * @param {number} threshold
      * @param {number} knee
-     * @param {number} detector_mode
+     * @param {DetectorMode} detector_mode
      * @param {number} lookahead_ms
      * @param {number} rms_time_ms
      */
     set_limiter_params(threshold, knee, detector_mode, lookahead_ms, rms_time_ms) {
-        if (!wasm.juraganaudiodsp_set_limiter_params) {
-            return;
-        }
         wasm.juraganaudiodsp_set_limiter_params(this.__wbg_ptr, threshold, knee, detector_mode, lookahead_ms, rms_time_ms);
     }
     /**
