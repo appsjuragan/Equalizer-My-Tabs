@@ -24,10 +24,10 @@ class JuraganAudioProcessor extends AudioWorkletProcessor {
         this.centerFrequencies = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 12000, 16000];
         this.filters = new JuraganAudioFilters(sampleRate, this.numFilters, this.centerFrequencies);
 
-        // Dynamics (Limiter/Compressor)
+        // Dynamics (Limiter/Compressor) - JS instance kept for potential fallback or visualizer config if needed
         this.dynamics = new JuraganAudioDynamics(sampleRate);
 
-        // SBR
+        // SBR - JS instance kept for config
         this.sbr = new JuraganAudioSBR();
 
         // FFT
@@ -35,8 +35,7 @@ class JuraganAudioProcessor extends AudioWorkletProcessor {
         this.fft = new JuraganAudioFFT(this.fftSize);
 
         // Wasm State
-        this.wasmDSP_L = null;
-        this.wasmDSP_R = null;
+        this.wasmDSP = null; // Single Stereo DSP instance
         this.wasmLoaded = false;
         this.wasmMemory = null;
 
@@ -51,8 +50,7 @@ class JuraganAudioProcessor extends AudioWorkletProcessor {
             const instance = await init({ module_or_path: this.wasmModule });
             this.wasmMemory = instance.memory;
 
-            this.wasmDSP_L = new JuraganAudioDSP(sampleRate);
-            this.wasmDSP_R = new JuraganAudioDSP(sampleRate);
+            this.wasmDSP = new JuraganAudioDSP(sampleRate);
 
             this.wasmLoaded = true;
 
@@ -72,20 +70,13 @@ class JuraganAudioProcessor extends AudioWorkletProcessor {
             if (f.type === 'lowshelf') typeId = 0;
             if (f.type === 'highshelf') typeId = 2;
 
-            this.wasmDSP_L.set_filter(i, typeId, f.frequency, f.q, f.gain);
-            this.wasmDSP_R.set_filter(i, typeId, f.frequency, f.q, f.gain);
+            this.wasmDSP.set_filter(i, typeId, f.frequency, f.q, f.gain);
         });
 
-        // Disable internal WASM SBR and Limiter to control them in JS
-        this.wasmDSP_L.set_sbr_active(false);
-        this.wasmDSP_R.set_sbr_active(false);
-
-        // Set WASM limiter threshold high to bypass (we do it in JS)
-        this.wasmDSP_L.set_limiter(100.0, 0.5);
-        this.wasmDSP_R.set_limiter(100.0, 0.5);
-
-        this.wasmDSP_L.set_gain(this.outputGain);
-        this.wasmDSP_R.set_gain(this.outputGain);
+        // Initialize defaults
+        this.wasmDSP.set_gain(this.outputGain);
+        this.wasmDSP.set_sbr_options(this.sbr.sbrEnabled, this.sbr.sbrUserGain);
+        this.wasmDSP.set_limiter_options(this.dynamics.limiterEnabled, this.dynamics.limiterAttack);
     }
 
     handleMessage(data) {
@@ -93,9 +84,15 @@ class JuraganAudioProcessor extends AudioWorkletProcessor {
             case 'initialState':
                 if (data.sbrOptions) {
                     this.sbr.setOptions(data.sbrOptions.enabled, data.sbrOptions.gain);
+                    if (this.wasmLoaded) {
+                        this.wasmDSP.set_sbr_options(data.sbrOptions.enabled, data.sbrOptions.gain);
+                    }
                 }
                 if (data.limiterOptions) {
                     this.dynamics.setLimiterOptions(data.limiterOptions.enabled, data.limiterOptions.attack);
+                    if (this.wasmLoaded) {
+                        this.wasmDSP.set_limiter_options(data.limiterOptions.enabled, data.limiterOptions.attack);
+                    }
                 }
                 if (data.visualizerFps) {
                     this.visualizerFps = data.visualizerFps;
@@ -104,12 +101,11 @@ class JuraganAudioProcessor extends AudioWorkletProcessor {
                 if (data.gain) {
                     this.outputGain = data.gain;
                     if (this.wasmLoaded) {
-                        this.wasmDSP_L.set_gain(data.gain);
-                        this.wasmDSP_R.set_gain(data.gain);
+                        this.wasmDSP.set_gain(data.gain);
                     }
                 }
                 if (data.filters) {
-                    // Full state sync not fully utilized in this msg format usually, handled individually
+                    // Filter syncing usually handled via modifyFilter events
                 }
             // Flow through
             case 'modifyFilter':
@@ -127,16 +123,14 @@ class JuraganAudioProcessor extends AudioWorkletProcessor {
                         if (f.type === 'lowshelf') typeId = 0;
                         if (f.type === 'highshelf') typeId = 2;
 
-                        this.wasmDSP_L.set_filter(data.index, typeId, f.frequency, f.q, f.gain);
-                        this.wasmDSP_R.set_filter(data.index, typeId, f.frequency, f.q, f.gain);
+                        this.wasmDSP.set_filter(data.index, typeId, f.frequency, f.q, f.gain);
                     }
                 }
                 break;
             case 'modifyGain':
                 this.outputGain = data.gain;
                 if (this.wasmLoaded) {
-                    this.wasmDSP_L.set_gain(data.gain);
-                    this.wasmDSP_R.set_gain(data.gain);
+                    this.wasmDSP.set_gain(data.gain);
                 }
                 break;
             case 'resetFilters':
@@ -145,8 +139,7 @@ class JuraganAudioProcessor extends AudioWorkletProcessor {
                     filter.gain = 0;
                     this.filters.calculateBiquadCoefficients(filter);
                     if (this.wasmLoaded) {
-                        this.wasmDSP_L.set_filter(i, 1, filter.frequency, filter.q, 0.0);
-                        this.wasmDSP_R.set_filter(i, 1, filter.frequency, filter.q, 0.0);
+                        this.wasmDSP.set_filter(i, 1, filter.frequency, filter.q, 0.0);
                     }
                 });
                 this.outputGain = 1.0;
@@ -161,16 +154,21 @@ class JuraganAudioProcessor extends AudioWorkletProcessor {
                         let typeId = 1;
                         if (filter.type === 'lowshelf') typeId = 0;
                         if (filter.type === 'highshelf') typeId = 2;
-                        this.wasmDSP_L.set_filter(i, typeId, filter.frequency, filter.q, filter.gain);
-                        this.wasmDSP_R.set_filter(i, typeId, filter.frequency, filter.q, filter.gain);
+                        this.wasmDSP.set_filter(i, typeId, filter.frequency, filter.q, filter.gain);
                     });
                 }
                 break;
             case 'setSbrOptions':
                 this.sbr.setOptions(data.options.enabled, data.options.gain);
+                if (this.wasmLoaded) {
+                    this.wasmDSP.set_sbr_options(data.options.enabled, data.options.gain);
+                }
                 break;
             case 'setLimiterOptions':
                 this.dynamics.setLimiterOptions(data.options.enabled, data.options.attack);
+                if (this.wasmLoaded) {
+                    this.wasmDSP.set_limiter_options(data.options.enabled, data.options.attack);
+                }
                 break;
             case 'setVisualizerFps':
                 this.visualizerFps = data.fps;
@@ -180,25 +178,17 @@ class JuraganAudioProcessor extends AudioWorkletProcessor {
     }
 
     processWasm(input, output, blockSize) {
-        // 1. EQ (WASM)
-        if (input[0] && output[0]) {
-            this.wasmDSP_L.process_block(input[0], output[0]);
+        const leftIn = input[0];
+        const rightIn = input[1] || input[0];
+        const leftOut = output[0];
+        const rightOut = output[1] || output[0];
+
+        if (leftIn && leftOut) {
+            // Stereo Processing in one go
+            this.wasmDSP.process_stereo(leftIn, rightIn, leftOut, rightOut);
         }
-        if (input[1] && output[1]) {
-            this.wasmDSP_R.process_block(input[1], output[1]);
-        }
 
-        // 2 & 3 & 4. JS Processing chain (SBR -> Compressor -> Limiter)
-        const left = output[0];
-        const right = output[1] || output[0];
-
-        // SBR
-        this.sbr.processBlock(left, right, blockSize);
-
-        // Dynamics (Compressor + Limiter)
-        this.dynamics.processBlock(left, right, blockSize);
-
-        // FFT Analysis & SBR Detection (JS Side)
+        // FFT Analysis (Still in JS/WASM hybrid usage for Display)
         if (output[0]) {
             const buffer = this.fft.getBuffer();
 
@@ -207,7 +197,9 @@ class JuraganAudioProcessor extends AudioWorkletProcessor {
 
             // Fill new data (Mix L+R)
             for (let i = 0; i < blockSize; i++) {
-                buffer[this.fftSize - blockSize + i] = (left[i] + (output[1] ? right[i] : left[i])) * 0.5;
+                // Use output (processed) signal for visualizer? Usually we use input or post-EQ.
+                // Using output lets user see effects.
+                buffer[this.fftSize - blockSize + i] = (leftOut[i] + rightOut[i]) * 0.5;
             }
 
             this.samplesSinceLastFft += blockSize;
@@ -217,20 +209,15 @@ class JuraganAudioProcessor extends AudioWorkletProcessor {
                 this.samplesSinceLastFft = 0;
 
                 const fftData = this.fft.performFFT(buffer);
-                this.sbr.detectSBR(fftData);
 
-                let reductionDb = 0;
-                let minRed = this.dynamics.getMinReduction();
-                if (minRed < 1.0) {
-                    reductionDb = 20 * Math.log10(minRed);
-                    this.dynamics.resetMinReduction();
-                }
+                // Get reduction from WASM
+                let reductionDb = this.wasmDSP.get_reduction_db();
 
                 this.port.postMessage({
                     type: 'fftData',
                     data: fftData,
                     limiterReduction: reductionDb,
-                    sbrActive: this.sbr.sbrActive
+                    sbrActive: this.wasmDSP.is_sbr_active()
                 });
             }
         }
@@ -270,13 +257,12 @@ class JuraganAudioProcessor extends AudioWorkletProcessor {
         if (this.samplesSinceLastFft >= this.framesPerRender) {
             this.samplesSinceLastFft = 0;
             const fftData = this.fft.performFFT(buffer);
-            this.sbr.detectSBR(fftData); // Detect even if SBR not applied
 
             this.port.postMessage({
                 type: 'fftData',
                 data: fftData,
                 limiterReduction: 0,
-                sbrActive: this.sbr.sbrActive
+                sbrActive: this.sbr.sbrEnabled
             });
         }
         return true;

@@ -5,6 +5,7 @@ authors = ["AppsJuragan inc."]
 edition = "2021"
 
 [lib]
+name = "juragan_audio_dsp"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
@@ -17,7 +18,7 @@ console_error_panic_hook = "0.1"
 rustfft = "6.1"           # FFT with SIMD
 rubato = "0.14"           # Resampling
 wide = "0.7"              # SIMD helpers
-
+num-traits = "0.2"        # For Zero trait
 
 [profile.release]
 lto = true

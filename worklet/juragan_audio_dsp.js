@@ -1,5 +1,53 @@
 /* @ts-self-types="./juragan_audio_dsp.d.ts" */
 
+export class DynamicsProcessor {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        DynamicsProcessorFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_dynamicsprocessor_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    get_reduction_db() {
+        const ret = wasm.dynamicsprocessor_get_reduction_db(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @param {number} sample_rate
+     */
+    constructor(sample_rate) {
+        const ret = wasm.dynamicsprocessor_new(sample_rate);
+        this.__wbg_ptr = ret >>> 0;
+        DynamicsProcessorFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * @param {Float32Array} left
+     * @param {Float32Array} right
+     */
+    process_block(left, right) {
+        var ptr0 = passArrayF32ToWasm0(left, wasm.__wbindgen_malloc);
+        var len0 = WASM_VECTOR_LEN;
+        var ptr1 = passArrayF32ToWasm0(right, wasm.__wbindgen_malloc);
+        var len1 = WASM_VECTOR_LEN;
+        wasm.dynamicsprocessor_process_block(this.__wbg_ptr, ptr0, len0, left, ptr1, len1, right);
+    }
+    /**
+     * @param {boolean} enabled
+     * @param {number} attack
+     */
+    set_limiter_options(enabled, attack) {
+        wasm.dynamicsprocessor_set_limiter_options(this.__wbg_ptr, enabled, attack);
+    }
+}
+if (Symbol.dispose) DynamicsProcessor.prototype[Symbol.dispose] = DynamicsProcessor.prototype.free;
+
 export class JuraganAudioDSP {
     __destroy_into_raw() {
         const ptr = this.__wbg_ptr;
@@ -31,6 +79,13 @@ export class JuraganAudioDSP {
         return ret;
     }
     /**
+     * @returns {boolean}
+     */
+    is_sbr_active() {
+        const ret = wasm.juraganaudiodsp_is_sbr_active(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * @param {number} sample_rate
      */
     constructor(sample_rate) {
@@ -40,15 +95,21 @@ export class JuraganAudioDSP {
         return this;
     }
     /**
-     * @param {Float32Array} input
-     * @param {Float32Array} output
+     * @param {Float32Array} input_l
+     * @param {Float32Array} input_r
+     * @param {Float32Array} output_l
+     * @param {Float32Array} output_r
      */
-    process_block(input, output) {
-        const ptr0 = passArrayF32ToWasm0(input, wasm.__wbindgen_malloc);
+    process_stereo(input_l, input_r, output_l, output_r) {
+        const ptr0 = passArrayF32ToWasm0(input_l, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
-        var ptr1 = passArrayF32ToWasm0(output, wasm.__wbindgen_malloc);
-        var len1 = WASM_VECTOR_LEN;
-        wasm.juraganaudiodsp_process_block(this.__wbg_ptr, ptr0, len0, ptr1, len1, output);
+        const ptr1 = passArrayF32ToWasm0(input_r, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        var ptr2 = passArrayF32ToWasm0(output_l, wasm.__wbindgen_malloc);
+        var len2 = WASM_VECTOR_LEN;
+        var ptr3 = passArrayF32ToWasm0(output_r, wasm.__wbindgen_malloc);
+        var len3 = WASM_VECTOR_LEN;
+        wasm.juraganaudiodsp_process_stereo(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, output_l, ptr3, len3, output_r);
     }
     /**
      * @param {number} index
@@ -67,20 +128,70 @@ export class JuraganAudioDSP {
         wasm.juraganaudiodsp_set_gain(this.__wbg_ptr, val);
     }
     /**
-     * @param {number} threshold
-     * @param {number} knee
+     * @param {boolean} enabled
+     * @param {number} attack
      */
-    set_limiter(threshold, knee) {
-        wasm.juraganaudiodsp_set_limiter(this.__wbg_ptr, threshold, knee);
+    set_limiter_options(enabled, attack) {
+        wasm.juraganaudiodsp_set_limiter_options(this.__wbg_ptr, enabled, attack);
     }
     /**
-     * @param {boolean} active
+     * @param {boolean} enabled
+     * @param {number} gain
      */
-    set_sbr_active(active) {
-        wasm.juraganaudiodsp_set_sbr_active(this.__wbg_ptr, active);
+    set_sbr_options(enabled, gain) {
+        wasm.juraganaudiodsp_set_sbr_options(this.__wbg_ptr, enabled, gain);
     }
 }
 if (Symbol.dispose) JuraganAudioDSP.prototype[Symbol.dispose] = JuraganAudioDSP.prototype.free;
+
+export class SBRProcessor {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        SBRProcessorFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_sbrprocessor_free(ptr, 0);
+    }
+    /**
+     * @returns {boolean}
+     */
+    is_enabled() {
+        const ret = wasm.sbrprocessor_is_enabled(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * @param {number} sample_rate
+     */
+    constructor(sample_rate) {
+        const ret = wasm.sbrprocessor_new(sample_rate);
+        this.__wbg_ptr = ret >>> 0;
+        SBRProcessorFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * @param {Float32Array} input_l
+     * @param {Float32Array} input_r
+     * @param {boolean} sbr_active
+     */
+    process_block(input_l, input_r, sbr_active) {
+        var ptr0 = passArrayF32ToWasm0(input_l, wasm.__wbindgen_malloc);
+        var len0 = WASM_VECTOR_LEN;
+        var ptr1 = passArrayF32ToWasm0(input_r, wasm.__wbindgen_malloc);
+        var len1 = WASM_VECTOR_LEN;
+        wasm.sbrprocessor_process_block(this.__wbg_ptr, ptr0, len0, input_l, ptr1, len1, input_r, sbr_active);
+    }
+    /**
+     * @param {boolean} enabled
+     * @param {number} gain
+     */
+    set_options(enabled, gain) {
+        wasm.sbrprocessor_set_options(this.__wbg_ptr, enabled, gain);
+    }
+}
+if (Symbol.dispose) SBRProcessor.prototype[Symbol.dispose] = SBRProcessor.prototype.free;
 
 function __wbg_get_imports() {
     const import0 = {
@@ -107,9 +218,15 @@ function __wbg_get_imports() {
     };
 }
 
+const DynamicsProcessorFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_dynamicsprocessor_free(ptr >>> 0, 1));
 const JuraganAudioDSPFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_juraganaudiodsp_free(ptr >>> 0, 1));
+const SBRProcessorFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_sbrprocessor_free(ptr >>> 0, 1));
 
 function getArrayF32FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
