@@ -9,7 +9,9 @@ export const juraganaudiodsp_process_block: (a: number, b: number, c: number, d:
 export const juraganaudiodsp_set_filter: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
 export const juraganaudiodsp_set_gain: (a: number, b: number) => void;
 export const juraganaudiodsp_set_limiter: (a: number, b: number, c: number) => void;
+export const juraganaudiodsp_set_limiter_params: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
 export const juraganaudiodsp_set_sbr_active: (a: number, b: number) => void;
+export const dynamicsprocessor_set_limiter_params: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
 export const __wbindgen_externrefs: WebAssembly.Table;
 export const __wbindgen_malloc: (a: number, b: number) => number;
 export const __wbindgen_free: (a: number, b: number, c: number) => void;

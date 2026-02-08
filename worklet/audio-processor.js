@@ -58,6 +58,10 @@ class JuraganAudioProcessor extends AudioWorkletProcessor {
 
         } catch (e) {
             console.error('Failed to load Wasm DSP:', e);
+            this.port.postMessage({
+                type: 'wasmError',
+                message: 'WASM DSP failed to load. Audio will run in bypass mode.'
+            });
         }
     }
 
@@ -92,6 +96,16 @@ class JuraganAudioProcessor extends AudioWorkletProcessor {
                     this.dynamics.setLimiterOptions(data.limiterOptions.enabled, data.limiterOptions.attack);
                     if (this.wasmLoaded) {
                         this.wasmDSP.set_limiter_options(data.limiterOptions.enabled, data.limiterOptions.attack);
+                        if (data.limiterOptions.threshold !== undefined && this.wasmDSP.set_limiter_params) {
+                            const mode = data.limiterOptions.detectorMode === 'rms' ? 1 : 0;
+                            this.wasmDSP.set_limiter_params(
+                                data.limiterOptions.threshold,
+                                data.limiterOptions.knee ?? 0.0,
+                                mode,
+                                data.limiterOptions.lookaheadMs ?? 0.0,
+                                data.limiterOptions.rmsTimeMs ?? 50.0
+                            );
+                        }
                     }
                 }
                 if (data.visualizerFps) {
@@ -168,6 +182,16 @@ class JuraganAudioProcessor extends AudioWorkletProcessor {
                 this.dynamics.setLimiterOptions(data.options.enabled, data.options.attack);
                 if (this.wasmLoaded) {
                     this.wasmDSP.set_limiter_options(data.options.enabled, data.options.attack);
+                    if (data.options.threshold !== undefined && this.wasmDSP.set_limiter_params) {
+                        const mode = data.options.detectorMode === 'rms' ? 1 : 0;
+                        this.wasmDSP.set_limiter_params(
+                            data.options.threshold,
+                            data.options.knee ?? 0.0,
+                            mode,
+                            data.options.lookaheadMs ?? 0.0,
+                            data.options.rmsTimeMs ?? 50.0
+                        );
+                    }
                 }
                 break;
             case 'setVisualizerFps':

@@ -72,6 +72,11 @@ async function initAudio() {
                 limiterReduction: data.limiterReduction,
                 sbrActive: data.sbrActive
             }).catch(() => { }); // Ignore errors if popup is closed
+        } else if (event.data.type === 'wasmError') {
+            chrome.runtime.sendMessage({
+                type: 'wasmError',
+                message: event.data.message
+            }).catch(() => { });
         }
     };
 

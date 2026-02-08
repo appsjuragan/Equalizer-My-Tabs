@@ -209,6 +209,51 @@
               <div class="range-value" id="limiterAttackValue">100ms</div>
             </div>
           </div>
+          <div class="setting-row">
+            <span class="setting-label">Limiter Threshold</span>
+            <div class="range-container">
+              <span class="range-min">0.70</span>
+              <input type="range" id="limiterThreshold" min="0.7" max="1.0" step="0.01" value="0.95">
+              <span class="range-max">1.00</span>
+              <div class="range-value" id="limiterThresholdValue">0.95</div>
+            </div>
+          </div>
+          <div class="setting-row">
+            <span class="setting-label">Limiter Knee</span>
+            <div class="range-container">
+              <span class="range-min">0</span>
+              <input type="range" id="limiterKnee" min="0" max="0.2" step="0.01" value="0.05">
+              <span class="range-max">0.20</span>
+              <div class="range-value" id="limiterKneeValue">0.05</div>
+            </div>
+          </div>
+          <div class="setting-row">
+            <span class="setting-label">Limiter Lookahead</span>
+            <div class="range-container">
+              <span class="range-min">0 ms</span>
+              <input type="range" id="limiterLookahead" min="0" max="5" step="0.5" value="2">
+              <span class="range-max">5 ms</span>
+              <div class="range-value" id="limiterLookaheadValue">2ms</div>
+            </div>
+          </div>
+          <div class="setting-row">
+            <span class="setting-label">Limiter Detector</span>
+            <div class="select-container">
+              <select id="limiterDetectorMode">
+                <option value="peak">Peak</option>
+                <option value="rms">RMS</option>
+              </select>
+            </div>
+          </div>
+          <div class="setting-row">
+            <span class="setting-label">Limiter RMS Window</span>
+            <div class="range-container">
+              <span class="range-min">10 ms</span>
+              <input type="range" id="limiterRmsTime" min="10" max="200" step="10" value="50">
+              <span class="range-max">200 ms</span>
+              <div class="range-value" id="limiterRmsTimeValue">50ms</div>
+            </div>
+          </div>
         </div>
 
         <!-- Visualizer FPS Section -->
