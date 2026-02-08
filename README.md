@@ -1,62 +1,73 @@
-# 🎧 JuraganAudio Toolkit
+# 🎧 JuraganAudio: The Ultimate Browser Audio Engine
 
-JuraganAudio is a powerful, real-time audio equalizer extension for Google Chrome. It allows you to EQ any audio you find on the web, live! Bass boost, dim the highs, up the vocals — all with a few clicks.
+Experience studio-grade audio processing right in your browser. **JuraganAudio** is a high-performance, real-time audio enhancement toolkit that transforms your web listening experience with precision and power.
 
-## ✨ Features
+Built on a foundation of professional DSP principles and powered by a custom **Rust-based DSP engine**, it offers unparalleled audio quality with minimal CPU overhead.
 
-- **11-Band EQ**: Full control over your audio with professional-grade filters (Low-shelf, Peaking, High-shelf).
-- **Real-time Spectrum Visualizer**: See your audio as you hear it. Watch how your EQ changes the frequency spectrum in real-time.
-- **Preset Management**: Save your favorite configurations and switch between them instantly. Includes a built-in "Bass Boost" preset.
-- **Per-Tab Equalization**: Independently EQ different tabs or apply settings to multiple tabs at once.
-- **Import/Export**: Easily back up your presets or share them with others.
+---
 
-### 🎵 Sound Quality Enhancements (v2.1+)
+## 📸 Experience the Power
 
-- **3 Quality Modes**:
-  - ⚡ **Efficient**: Optimized Q values, standard limiting (~5-8% CPU)
-  - 🎵 **Quality**: Enhanced Q values, tighter limiting (~5-8% CPU)
-  - 🎧 **Hi-Fi**: Maximum Q precision, ultra-tight limiting (~5-8% CPU)
-  
-- **Soft Limiting**: Prevents harsh clipping distortion when boosting frequencies
-- **Optimized Filter Q**: Frequency-dependent Q values for smoother, more musical response
-- **48kHz Processing**: Fixed sample rate for consistent quality
+![Main Interface](assets/ScreenShot1.png)
+*Precision EQ and Real-time Visualization*
 
-## 🛠️ Technical Details
+![Settings & Customization](assets/ScreenShot2.png)
+*Advanced Tuning and Preset Management*
 
-- **Core**: Built using the Web Audio API (`AudioWorklet`, `AudioContext`).
-- **Processing**: High-performance Rust-based DSP engine compiled to **WebAssembly (WASM)** for superior audio quality and efficiency.
-- **Visualization**: Powered by **Snap.svg** for high-quality, crisp vector-based spectrum rendering.
-- **Architecture**: Manifest V3 with offscreen document for persistent audio processing.
+---
+
+## 🔥 Why JuraganAudio?
+
+Most browser equalizers are simple filters that can distort or muddy your audio. JuraganAudio is different. It's a full-fledged **Audio Engine** designed for audiophiles and power users who demand the best.
+
+### 🚀 High-Performance DSP
+At its core, JuraganAudio runs a custom-built **Rust DSP Engine** compiled to **WebAssembly (WASM)**. This means:
+- **Zero Latency**: Real-time processing that keeps up with your music, movies, and games.
+- **Extreme Precision**: Mathematical accuracy in every frequency adjustment for a professional sound.
+- **Ultra Efficiency**: Studio-grade processing that won't slow down your browsing experience.
+
+### 🎨 11-Band Parametric EQ
+Take total control of your soundscape. From deep, bone-shaking bass to crystal-clear vocals, our 11-band equalizer uses professional-grade filters (Low-shelf, Peaking, and High-shelf) to shape your audio exactly how you want it.
+
+### ✨ SBR (Spectral Band Replication)
+Missing that high-end sparkle? Our SBR technology intelligently reconstructs high frequencies, bringing life back to compressed audio and low-quality streams. It's like "un-clogging" your audio for a crisp, airy finish.
+
+---
+
+## ✨ Key Features
+
+- **Real-time Spectrum Visualizer**: A beautiful, responsive SVG-based visualizer that shows you exactly what your audio looks like as you Hear it.
+- **Intelligent Soft Limiting**: Crank the volume without fear. Our built-in soft limiter prevents harsh clipping distortion, ensuring a clean, powerful output.
+- **3 Professional Quality Modes**:
+  - ⚡ **Efficient**: Optimized for low resource usage.
+  - 🎵 **Quality**: Enhanced precision for the perfect daily balance.
+  - 🎧 **Hi-Fi**: Maximum Q-factor precision for the ultimate listening experience.
+- **Preset Management**: Instant access to your favorite setups. Save, Export, and Import presets with ease.
+- **Per-Tab Control**: Independently EQ different tabs or apply settings globally—the power is in your hands.
+
+---
+
+## 🛠️ Technical Excellence
+
+- **Manifest V3 Compliant**: Built on the latest extension standards for maximum security and longevity.
+- **AudioWorklet Architecture**: High-priority processing on a dedicated audio thread, ensuring no "stutter" even when your browser is under load.
+- **Offscreen Processing**: Stable, persistent audio capturing that handles tab switching and background play flawlessly.
+
+---
 
 ## 🚀 Getting Started
 
-1. **Install**: Load as an unpacked extension in Chrome.
-2. **Activate**: Click the JuraganAudio icon in your toolbar and click "EQ this tab".
-3. **Adjust**: Drag the dots on the graph to change frequencies and gain.
-4. **Quality Mode**: Select your preferred quality/CPU tradeoff from the dropdown.
-5. **Save**: Type a name and click "+" to save your preset.
+1. **Installation**: Load JuraganAudio in your browser (Developer Mode > Load Unpacked).
+2. **Activation**: Click the JuraganAudio icon and select **"EQ this tab"**.
+3. **Sculpt**: Drag the nodes on the interactive graph to find your perfect curve.
+4. **Enhance**: Use the SBR toggle and Quality selector to add that final professional polish.
+5. **Save**: Click the "+" to save your masterpiece as a preset.
 
-## 🔧 Recent Improvements
-
-- **WASM Audio Engine**: Fully integrated Rust DSP for 11-band parametric EQ and professional soft limiting.
-- **Spectrum Visualizer**: Optimized SVG-based real-time analysis.
-- **Sound Quality**: 3 quality modes, intelligent soft limiting, and frequency-dependent Q.
-- **Manifest V3**: State-of-the-art extension architecture.
-- **JuraganAudio Refresh**: Complete branding revamp for a premium experience.
-
-## 📝 Roadmap
-
-- [x] ~~Migrate to Manifest V3~~
-- [x] ~~Add sound quality improvements~~
-- [x] ~~Implement Dark/Light mode themes~~
-- [x] ~~Full Rust DSP / WebAssembly integration~~
-- [ ] Add more built-in presets (Cinema, Voice, Night Mode)
-- [ ] Add spatial audio/stereo widening effects
-- [ ] Migrate visualizer to Webgl2
+---
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
-*Created with ❤️ by AppsJuragan inc.*
+*Crafted with ❤️ and precision by **AppsJuragan inc.***
