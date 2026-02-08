@@ -102,6 +102,9 @@ function initMessaging() {
             EQGraph.setSampleRate(msg.Fs);
             console.log("Set sample rate to " + msg.Fs);
         }
+        else if (msg.type === "wasmError") {
+            showMessage(msg.message || "WASM DSP failed to load.");
+        }
     });
 }
 
@@ -462,6 +465,15 @@ function initSettingsUI() {
     const limiterToggle = document.getElementById("limiterToggle");
     const limiterAttack = document.getElementById("limiterAttack");
     const limiterAttackValue = document.getElementById("limiterAttackValue");
+    const limiterThreshold = document.getElementById("limiterThreshold");
+    const limiterThresholdValue = document.getElementById("limiterThresholdValue");
+    const limiterKnee = document.getElementById("limiterKnee");
+    const limiterKneeValue = document.getElementById("limiterKneeValue");
+    const limiterLookahead = document.getElementById("limiterLookahead");
+    const limiterLookaheadValue = document.getElementById("limiterLookaheadValue");
+    const limiterDetectorMode = document.getElementById("limiterDetectorMode");
+    const limiterRmsTime = document.getElementById("limiterRmsTime");
+    const limiterRmsTimeValue = document.getElementById("limiterRmsTimeValue");
     const vizFps = document.getElementById("visualizerFps");
     const vizFpsValue = document.getElementById("visualizerFpsValue");
 
@@ -483,6 +495,10 @@ function initSettingsUI() {
     // Live UI updates (visual only)
     sbrGain.oninput = () => sbrGainValue.textContent = sbrGain.value + "db";
     limiterAttack.oninput = () => limiterAttackValue.textContent = limiterAttack.value + "ms";
+    limiterThreshold.oninput = () => limiterThresholdValue.textContent = limiterThreshold.value;
+    limiterKnee.oninput = () => limiterKneeValue.textContent = limiterKnee.value;
+    limiterLookahead.oninput = () => limiterLookaheadValue.textContent = limiterLookahead.value + "ms";
+    limiterRmsTime.oninput = () => limiterRmsTimeValue.textContent = limiterRmsTime.value + "ms";
     vizFps.oninput = () => vizFpsValue.textContent = vizFps.value + " fps";
 
     // OK Button - Save and Close
@@ -500,7 +516,12 @@ function initSettingsUI() {
             type: "setLimiterOptions",
             options: {
                 enabled: limiterToggle.checked,
-                attack: parseFloat(limiterAttack.value) / 1000 // Convert to seconds
+                attack: parseFloat(limiterAttack.value) / 1000, // Convert to seconds
+                threshold: parseFloat(limiterThreshold.value),
+                knee: parseFloat(limiterKnee.value),
+                lookaheadMs: parseFloat(limiterLookahead.value),
+                detectorMode: limiterDetectorMode.value,
+                rmsTimeMs: parseFloat(limiterRmsTime.value)
             }
         });
 
@@ -522,7 +543,17 @@ function initSettingsUI() {
         limiterToggle.checked = true;
         limiterAttack.value = 100;
         limiterAttackValue.textContent = "100ms";
+        limiterThreshold.value = 0.95;
+        limiterThresholdValue.textContent = "0.95";
+        limiterKnee.value = 0.05;
+        limiterKneeValue.textContent = "0.05";
+        limiterLookahead.value = 2;
+        limiterLookaheadValue.textContent = "2ms";
+        limiterDetectorMode.value = "peak";
+        limiterRmsTime.value = 50;
+        limiterRmsTimeValue.textContent = "50ms";
 
+        vizFps.value = 30;
         vizFpsValue.textContent = "30 fps";
     };
 
@@ -553,12 +584,19 @@ function updateSettingsUI(data) {
         document.getElementById("limiterToggle").checked = data.limiterOptions.enabled;
         document.getElementById("limiterAttack").value = data.limiterOptions.attack * 1000; // to ms
         document.getElementById("limiterAttackValue").textContent = (data.limiterOptions.attack * 1000) + "ms";
+        document.getElementById("limiterThreshold").value = data.limiterOptions.threshold ?? 0.95;
+        document.getElementById("limiterThresholdValue").textContent = data.limiterOptions.threshold ?? 0.95;
+        document.getElementById("limiterKnee").value = data.limiterOptions.knee ?? 0.05;
+        document.getElementById("limiterKneeValue").textContent = data.limiterOptions.knee ?? 0.05;
+        document.getElementById("limiterLookahead").value = data.limiterOptions.lookaheadMs ?? 2;
+        document.getElementById("limiterLookaheadValue").textContent = (data.limiterOptions.lookaheadMs ?? 2) + "ms";
+        document.getElementById("limiterDetectorMode").value = data.limiterOptions.detectorMode ?? "peak";
+        document.getElementById("limiterRmsTime").value = data.limiterOptions.rmsTimeMs ?? 50;
+        document.getElementById("limiterRmsTimeValue").textContent = (data.limiterOptions.rmsTimeMs ?? 50) + "ms";
     }
     if (data.visualizerFps) {
         document.getElementById("visualizerFps").value = data.visualizerFps;
         document.getElementById("visualizerFpsValue").textContent = data.visualizerFps + " fps";
     }
 }
-
-
 

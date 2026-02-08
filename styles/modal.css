@@ -202,3 +202,18 @@ input[type=range]::-webkit-slider-thumb {
     font-variant-numeric: tabular-nums;
     font-weight: 600;
 }
+
+.select-container {
+    flex: 1;
+    max-width: 250px;
+}
+
+.select-container select {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--bg-glass-border);
+    color: var(--text-main);
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+}

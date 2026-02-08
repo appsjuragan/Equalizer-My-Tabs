@@ -66,6 +66,38 @@ impl BiquadFilter {
         let a2: f64;
 
         match self.filter_type {
+            FilterType::LowPass => {
+                b0 = (1.0 - cos_w0) / 2.0;
+                b1 = 1.0 - cos_w0;
+                b2 = (1.0 - cos_w0) / 2.0;
+                a0 = 1.0 + alpha;
+                a1 = -2.0 * cos_w0;
+                a2 = 1.0 - alpha;
+            },
+            FilterType::HighPass => {
+                b0 = (1.0 + cos_w0) / 2.0;
+                b1 = -(1.0 + cos_w0);
+                b2 = (1.0 + cos_w0) / 2.0;
+                a0 = 1.0 + alpha;
+                a1 = -2.0 * cos_w0;
+                a2 = 1.0 - alpha;
+            },
+            FilterType::BandPass => {
+                b0 = alpha;
+                b1 = 0.0;
+                b2 = -alpha;
+                a0 = 1.0 + alpha;
+                a1 = -2.0 * cos_w0;
+                a2 = 1.0 - alpha;
+            },
+            FilterType::Notch => {
+                b0 = 1.0;
+                b1 = -2.0 * cos_w0;
+                b2 = 1.0;
+                a0 = 1.0 + alpha;
+                a1 = -2.0 * cos_w0;
+                a2 = 1.0 - alpha;
+            },
             FilterType::LowShelf => {
                 b0 = a * ((a + 1.0) - (a - 1.0) * cos_w0 + 2.0 * a.sqrt() * alpha);
                 b1 = 2.0 * a * ((a - 1.0) - (a + 1.0) * cos_w0);

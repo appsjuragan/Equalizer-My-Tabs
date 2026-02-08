@@ -13,7 +13,15 @@ export let state = {
     activeStreams: [], // Tab IDs
     qualityMode: 'efficient', // 'efficient', 'quality', 'hifi'
     sbrOptions: { enabled: false, gain: 1.0 },
-    limiterOptions: { enabled: true, attack: 0.1 }, // attack in seconds (100ms)
+    limiterOptions: {
+        enabled: true,
+        attack: 0.1,
+        threshold: 0.95,
+        knee: 0.05,
+        lookaheadMs: 2.0,
+        detectorMode: 'peak',
+        rmsTimeMs: 50
+    }, // attack in seconds (100ms)
     visualizerFps: 30
 };
 
@@ -42,10 +50,19 @@ export async function initState() {
         state.sbrOptions = { enabled: false, gain: 1.0 };
     }
 
+    const limiterDefaults = {
+        enabled: true,
+        attack: 0.1,
+        threshold: 0.95,
+        knee: 0.05,
+        lookaheadMs: 2.0,
+        detectorMode: 'peak',
+        rmsTimeMs: 50
+    };
     if (data.LIMITER_OPTIONS) {
-        state.limiterOptions = JSON.parse(data.LIMITER_OPTIONS);
+        state.limiterOptions = { ...limiterDefaults, ...JSON.parse(data.LIMITER_OPTIONS) };
     } else {
-        state.limiterOptions = { enabled: true, attack: 0.1 };
+        state.limiterOptions = limiterDefaults;
     }
 
     if (data.VISUALIZER_FPS) {

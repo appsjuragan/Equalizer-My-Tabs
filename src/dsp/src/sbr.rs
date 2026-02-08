@@ -1,5 +1,6 @@
 use wasm_bindgen::prelude::*;
 use std::f32::consts::PI;
+use crate::config::SBR_CONFIG;
 
 // Simple IIR Lowpass for SBR Gen
 struct LowPassFilter {
@@ -110,7 +111,7 @@ pub struct SBRProcessor {
 impl SBRProcessor {
     #[wasm_bindgen(constructor)]
     pub fn new(sample_rate: f32) -> Self {
-        let alpha_hpf = 0.6; // Highpass for detection
+        let alpha_hpf = SBR_CONFIG.detection_hp_alpha; // Highpass for detection
         
         // Lowpass cutoff at 18000Hz to avoid noisy ultra-high content.
         let fc = 18000.0;
@@ -123,9 +124,9 @@ impl SBRProcessor {
             right: SbrChannelState::new(alpha_hpf, alpha_lpf, alpha_synth_hpf),
             
             alpha_hpf,
-            alpha_fast: 0.85,
-            alpha_slow: 0.992,
-            tail_decay: 0.9994,
+            alpha_fast: SBR_CONFIG.fast_env_alpha,
+            alpha_slow: SBR_CONFIG.slow_env_alpha,
+            tail_decay: SBR_CONFIG.tail_decay,
             
             params_gain: 1.0,
             params_enabled: false,

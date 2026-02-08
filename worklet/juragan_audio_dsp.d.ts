@@ -8,6 +8,7 @@ export class DynamicsProcessor {
     constructor(sample_rate: number);
     process_block(left: Float32Array, right: Float32Array): void;
     set_limiter_options(enabled: boolean, attack: number): void;
+    set_limiter_params(threshold: number, knee: number, detector_mode: number, lookahead_ms: number, rms_time_ms: number): void;
 }
 
 export class JuraganAudioDSP {
@@ -21,6 +22,7 @@ export class JuraganAudioDSP {
     set_filter(index: number, type_id: number, freq: number, q: number, gain: number): void;
     set_gain(val: number): void;
     set_limiter_options(enabled: boolean, attack: number): void;
+    set_limiter_params(threshold: number, knee: number, detector_mode: number, lookahead_ms: number, rms_time_ms: number): void;
     set_sbr_options(enabled: boolean, gain: number): void;
 }
 
@@ -44,6 +46,7 @@ export interface InitOutput {
     readonly dynamicsprocessor_new: (a: number) => number;
     readonly dynamicsprocessor_process_block: (a: number, b: number, c: number, d: any, e: number, f: number, g: any) => void;
     readonly dynamicsprocessor_set_limiter_options: (a: number, b: number, c: number) => void;
+    readonly dynamicsprocessor_set_limiter_params: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly juraganaudiodsp_get_fft: (a: number, b: number, c: number) => [number, number];
     readonly juraganaudiodsp_get_reduction_db: (a: number) => number;
     readonly juraganaudiodsp_is_sbr_active: (a: number) => number;
@@ -52,6 +55,7 @@ export interface InitOutput {
     readonly juraganaudiodsp_set_filter: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly juraganaudiodsp_set_gain: (a: number, b: number) => void;
     readonly juraganaudiodsp_set_limiter_options: (a: number, b: number, c: number) => void;
+    readonly juraganaudiodsp_set_limiter_params: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly juraganaudiodsp_set_sbr_options: (a: number, b: number, c: number) => void;
     readonly sbrprocessor_is_enabled: (a: number) => number;
     readonly sbrprocessor_new: (a: number) => number;

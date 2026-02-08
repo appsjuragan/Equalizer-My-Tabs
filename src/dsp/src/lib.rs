@@ -4,6 +4,7 @@ mod filters;
 mod dynamics;
 mod analysis;
 mod sbr;
+mod config;
 
 use filters::iir::{BiquadFilter, FilterType};
 use dynamics::compressor::DynamicsProcessor;
@@ -58,6 +59,18 @@ impl JuraganAudioDSP {
 
     pub fn set_limiter_options(&mut self, enabled: bool, attack: f32) {
         self.dynamics.set_limiter_options(enabled, attack);
+    }
+
+    pub fn set_limiter_params(
+        &mut self,
+        threshold: f32,
+        knee: f32,
+        detector_mode: dynamics::compressor::DetectorMode,
+        lookahead_ms: f32,
+        rms_time_ms: f32,
+    ) {
+        self.dynamics
+            .set_limiter_params(threshold, knee, detector_mode, lookahead_ms, rms_time_ms);
     }
     
     pub fn get_reduction_db(&mut self) -> f32 {
