@@ -230,6 +230,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         case "preset":
             applyPreset(msg.preset, msg.presetData);
             break;
+        case "setSbrOptions":
+            if (audioWorkletNode) {
+                audioWorkletNode.port.postMessage({ type: 'setSbrOptions', options: msg.options });
+            }
+            break;
+        case "setLimiterOptions":
+            if (audioWorkletNode) {
+                audioWorkletNode.port.postMessage({ type: 'setLimiterOptions', options: msg.options });
+            }
+            break;
+        case "setVisualizerFps":
+            if (audioWorkletNode) {
+                audioWorkletNode.port.postMessage({ type: 'setVisualizerFps', fps: msg.fps });
+            }
+            break;
     }
 });
 
