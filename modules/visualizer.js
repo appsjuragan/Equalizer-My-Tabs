@@ -4,8 +4,9 @@ const VISUALIZER_STYLE_KEY = "VISUALIZER_STYLE";
 const DEFAULT_VISUALIZER_STYLE = "default";
 
 const SAMPLE_RATE = 48000;
-const WIDTH = 640;
+const WIDTH = 740;
 const HEIGHT = 300;
+const MIN_FREQ = 10;
 
 let fftChannel = null;
 let limiterCallback = null;
@@ -80,10 +81,13 @@ export function setVisualizerStyle(style) {
 }
 
 function P(e) {
-    const c = 22050;
-    let val = e / c;
-    if (val < 0) val = 0;
-    return Math.pow(val, 0.25) * WIDTH;
+    const maxFreq = 22050;
+    const clamped = Math.max(MIN_FREQ, Math.min(e, maxFreq));
+    const logMin = Math.log10(MIN_FREQ);
+    const logMax = Math.log10(maxFreq);
+    const logVal = Math.log10(clamped);
+    const t = (logVal - logMin) / (logMax - logMin);
+    return Math.max(0, Math.min(1, t)) * WIDTH;
 }
 
 export function updateVisualizer(data) {
