@@ -123,7 +123,7 @@ body.light-mode>input#tab-3:checked~h1 #tabNav label[for="tab-3"] {
     background-color: rgba(255, 255, 255, 0.06);
     border-color: transparent;
     color: var(--text-main);
-    min-width: 120px;
+    min-width: 132px;
 }
 
 body.light-mode #tabNav #visualizerStyleSelect {
