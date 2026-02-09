@@ -264,7 +264,7 @@ function buildSpectrumPoints(bins, scaleX, scaleY) {
     const points = [];
     for (let i = 0; i < bins.length; i++) {
         const freq = (i * SAMPLE_RATE) / (bins.length * 2);
-        if (freq < 10) continue;
+        if (freq <= 0) continue;
 
         const rawX = P(freq);
         if (rawX > WIDTH) break;
