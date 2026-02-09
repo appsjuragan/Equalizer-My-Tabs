@@ -143,31 +143,56 @@ function drawAllCurves(filters) { // re
     }
 }
 
-function drawGrid(svg) { // ae
+function drawGrid(svg) {
     const isLight = document.body.classList.contains("light-mode");
     const labelColor = isLight ? "#4b5563" : "#6b7280";
     const gridOpacity = isLight ? 0.12 : 0.08;
 
-    // Draw vertical frequency lines
-    const maxFreq = EQMath.MAX_FREQ;
-    for (let freq = 5; freq < maxFreq; freq *= 2) {
+    // Vertical frequency grid (octaves)
+    for (let freq = 5; freq < EQMath.MAX_FREQ; freq *= 2) {
         const x = EQMath.freqToX(freq);
-        svg.line(x, 0, x, EQMath.HEIGHT).attr({ stroke: "#9ca3af", "stroke-opacity": gridOpacity }); // Full vertical lines
-        svg.line(x, EQMath.HEIGHT, x, EQMath.HEIGHT - 10).attr({ stroke: "#9ca3af", "stroke-opacity": 0.3 });
-        svg.text(x, EQMath.HEIGHT - 12, "" + Math.round(xToFreqForLabel(x)))
-            .attr({ fill: labelColor, "text-anchor": "middle", "font-size": 8 });
+
+        svg.line(x, 0, x, EQMath.HEIGHT).attr({
+            stroke: "#9ca3af",
+            "stroke-opacity": gridOpacity
+        });
+
+        svg.line(x, EQMath.HEIGHT, x, EQMath.HEIGHT - 10).attr({
+            stroke: "#9ca3af",
+            "stroke-opacity": 0.3
+        });
+
+        svg.text(
+            x,
+            EQMath.HEIGHT - 12,
+            Math.round(xToFreqForLabel(x))
+        ).attr({
+            fill: labelColor,
+            "text-anchor": "middle",
+            "font-size": 8
+        });
     }
 
-    // Draw horizontal gain lines
+    // Horizontal gain grid
     const step = 5;
     for (let g = EQMath.MIN_GAIN; g <= EQMath.MAX_GAIN; g += step) {
         const y = EQMath.gainToY(g);
-        svg.line(-40, y, EQMath.WIDTH, y).attr({ stroke: "#9ca3af", "stroke-opacity": gridOpacity }); // Full horizontal lines
-        svg.text(4, y - 2, "" + g)
-            .attr({ fill: labelColor, "font-size": 8, "dominant-baseline": "auto" });
+        const isZero = g === 0;
+
+        svg.line(-40, y, EQMath.WIDTH, y).attr({
+            stroke: "#9ca3af",
+            "stroke-opacity": isZero ? 0.25 : gridOpacity
+        });
+
+        svg.text(4, y - 2, "" + g).attr({
+            fill: isZero
+                ? (isLight ? "#374151" : "#d1d5db")
+                : labelColor,
+            "font-size": 8,
+            "font-weight": isZero ? "600" : "normal"
+        });
     }
 }
-
 function xToFreqForLabel(x) { // l
     return Math.pow(x / EQMath.WIDTH, 4) * EQMath.MAX_FREQ;
 }
